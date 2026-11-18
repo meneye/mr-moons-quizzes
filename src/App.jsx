@@ -1,7 +1,196 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X, User, Edit3, RotateCcw } from 'lucide-react';
 
-// Full 0-100 PEG list with matching emojis, dual-peg updates, and custom image paths (.png default with automatic .jpg fallback)
+// ==========================================
+// 1. CUSTOM HOOK: useProfile (localStorage)
+// ==========================================
+const STORAGE_KEY = 'memoquiz_arcade_profile';
+
+export function useProfile() {
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error('Failed to read profile from localStorage:', e);
+      return null;
+    }
+  });
+
+  // Sync state with localStorage and across components/tabs
+  const saveProfile = useCallback((updater) => {
+    setProfile((prev) => {
+      const nextState = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        if (nextState === null) {
+          localStorage.removeItem(STORAGE_KEY);
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+        }
+      } catch (e) {
+        console.error('Failed to save profile to localStorage:', e);
+      }
+      return nextState;
+    });
+  }, []);
+
+  const createProfile = useCallback((displayName) => {
+    const trimmed = displayName.trim();
+    if (!trimmed) return;
+    saveProfile({
+      displayName: trimmed,
+      totalScore: 0,
+      streak: 0
+    });
+  }, [saveProfile]);
+
+  const addPoints = useCallback((points) => {
+    saveProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        totalScore: Math.max(0, (prev.totalScore || 0) + points)
+      };
+    });
+  }, [saveProfile]);
+
+  const updateStreak = useCallback((newStreak) => {
+    saveProfile((prev) => {
+      if (!prev) return prev;
+      const computedStreak = typeof newStreak === 'function' ? newStreak(prev.streak || 0) : newStreak;
+      return {
+        ...prev,
+        streak: computedStreak
+      };
+    });
+  }, [saveProfile]);
+
+  const updateDisplayName = useCallback((newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    saveProfile((prev) => (prev ? { ...prev, displayName: trimmed } : null));
+  }, [saveProfile]);
+
+  const resetProfile = useCallback(() => {
+    saveProfile(null);
+  }, [saveProfile]);
+
+  return {
+    profile,
+    createProfile,
+    addPoints,
+    updateStreak,
+    updateDisplayName,
+    resetProfile
+  };
+}
+
+// ==========================================
+// 2. ARCADE WELCOME & PROFILE MODAL UI
+// ==========================================
+function ArcadeProfileOverlay({ profile, onCreate, onUpdateName, onReset, isOpen, onClose }) {
+  const [nameInput, setNameInput] = useState(profile?.displayName || '');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setNameInput(profile?.displayName || '');
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  }, [profile, isOpen]);
+
+  // Show automatically if no profile exists, or when manually opened to edit
+  if (profile && !isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!nameInput.trim()) return;
+    if (!profile) {
+      onCreate(nameInput);
+    } else {
+      onUpdateName(nameInput);
+      if (onClose) onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950/75 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="bg-white border-4 border-purple-300 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative text-center">
+        {profile && onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-100 p-2 rounded-full transition-colors"
+          >
+            <X size={22} />
+          </button>
+        )}
+
+        {/* Empty Profile Picture Square */}
+        <div className="w-20 h-20 bg-purple-50 rounded-2xl mx-auto mb-4 border-2 border-purple-200 shadow-inner" />
+
+        <h2 className="text-3xl md:text-4xl font-extrabold text-purple-900 mb-2 tracking-wide">
+          {profile ? 'Player Profile' : 'Welcome to MemoQuiz!'}
+        </h2>
+        <p className="text-purple-500 text-lg mb-6">
+          {profile ? 'Update your arcade display name or reset stats.' : 'Enter your display name to jump right in!'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            ref={inputRef}
+            type="text"
+            maxLength={18}
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="Your Display Name..."
+            className="w-full text-center text-2xl font-bold text-purple-900 border-2 border-purple-300 rounded-2xl py-3.5 px-4 focus:outline-none focus:border-purple-500 focus:bg-purple-50 transition-all placeholder:text-purple-300 bg-white shadow-inner"
+          />
+
+          <button
+            type="submit"
+            disabled={!nameInput.trim()}
+            className="w-full bg-purple-500 hover:bg-purple-400 disabled:bg-gray-300 text-white font-bold text-2xl py-3.5 rounded-2xl border-b-8 border-purple-700 disabled:border-gray-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider shadow-md"
+          >
+            {profile ? 'Save Name' : 'Start Playing'}
+          </button>
+        </form>
+
+        {profile && (
+          <div className="mt-6 pt-5 border-t-2 border-gray-100 flex flex-col gap-3">
+            <div className="flex justify-around bg-purple-50 p-3 rounded-2xl border border-purple-100">
+              <div>
+                <div className="text-xs uppercase text-purple-400 font-bold">All-Time Score</div>
+                <div className="text-2xl font-black text-purple-700">{profile.totalScore} pts</div>
+              </div>
+              <div className="border-r border-purple-200" />
+              <div>
+                <div className="text-xs uppercase text-purple-400 font-bold">Current Streak</div>
+                <div className="text-2xl font-black text-orange-500 flex items-center justify-center gap-1">
+                  <Flame size={20} fill="currentColor" /> {profile.streak}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                onReset();
+                if (onClose) onClose();
+              }}
+              className="w-full flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 font-bold py-2.5 rounded-xl transition-colors text-base"
+            >
+              <RotateCcw size={18} /> Reset Profile & Score
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 3. QUIZ DATA & IMAGE PRELOADER
+// ==========================================
 const PEG_DATA = [
   { num: 0, word: "Egg", emoji: "🥚" }, 
   { num: 1, word: "Mirror", emoji: "🪞" }, 
@@ -165,7 +354,19 @@ const getOrdinal = (n) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
+// Helper to preload a list of image URLs into browser memory
+const preloadImageUrl = (url) => {
+  if (!url) return;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = url;
+};
+
 export default function App() {
+  // Hook into Arcade Profile
+  const { profile, createProfile, addPoints, updateStreak, updateDisplayName, resetProfile } = useProfile();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   const [route, setRoute] = useState('home'); 
   const [gameConfig, setGameConfig] = useState({ type: null, mode: null, total: 0 });
   const [totalScore, setTotalScore] = useState(0);
@@ -200,7 +401,41 @@ export default function App() {
 
   const [revealStep, setRevealStep] = useState(0);
 
-  // Smoothly animate the score counting up when totalScore increases
+  // ==========================================
+  // FAST IMAGE PRELOADER (Eliminates PNG delay)
+  // ==========================================
+  useEffect(() => {
+    const urlsToPreload = [];
+    PEG_DATA.forEach(item => {
+      if (item.imageUrl) {
+        urlsToPreload.push(item.imageUrl);
+      }
+    });
+    PRESIDENTS_DATA.forEach(item => {
+      if (item.imageUrl) {
+        urlsToPreload.push(item.imageUrl);
+      }
+    });
+
+    let idx = 0;
+    const batchInterval = setInterval(() => {
+      for (let i = 0; i < 4 && idx < urlsToPreload.length; i++, idx++) {
+        preloadImageUrl(urlsToPreload[idx]);
+      }
+      if (idx >= urlsToPreload.length) clearInterval(batchInterval);
+    }, 60);
+
+    return () => clearInterval(batchInterval);
+  }, []);
+
+  useEffect(() => {
+    if (availableQuestions.length > 1) {
+      availableQuestions.slice(1, 6).forEach((q) => {
+        if (q.imageUrl) preloadImageUrl(q.imageUrl);
+      });
+    }
+  }, [availableQuestions]);
+
   useEffect(() => {
     if (totalScore === 0) {
       setDisplayScore(0);
@@ -219,7 +454,6 @@ export default function App() {
 
     const animateScore = (now) => {
       const progress = Math.min((now - startTimeAnim) / duration, 1);
-      // Ease out quad for smooth deceleration
       const easeOut = progress * (2 - progress);
       const current = Math.round(startVal + (endVal - startVal) * easeOut);
       setDisplayScore(current);
@@ -235,7 +469,6 @@ export default function App() {
     return () => clearTimeout(bumpTimer);
   }, [totalScore]);
 
-  // Clear floating points quickly after animation finishes
   useEffect(() => {
     if (floatingPoint) {
       const timer = setTimeout(() => {
@@ -245,7 +478,6 @@ export default function App() {
     }
   }, [floatingPoint]);
 
-  // 5-Minute Countdown Timer for PEG Test Mode
   useEffect(() => {
     if (route === 'peg-test' && timeLeft !== null) {
       if (timeLeft <= 0) {
@@ -293,6 +525,10 @@ export default function App() {
       total = mode === 'easy' ? 10 : mode === 'medium' ? 20 : 30;
       shuffled = [...PRESIDENTS_DATA].sort(() => Math.random() - 0.5).slice(0, total);
     }
+
+    shuffled.slice(0, 5).forEach(q => {
+      if (q.imageUrl) preloadImageUrl(q.imageUrl);
+    });
 
     setGameConfig({ type, mode, total });
     setTotalQuestionsCount(total);
@@ -348,7 +584,6 @@ export default function App() {
     }
   };
 
-  // Speed-Decay & Wrong-Try Penalty Scoring Formula (20 to 100 pts per question)
   const calculateQuestionPoints = (timeInSeconds, currentWrongTries) => {
     let basePoints = 40;
     if (timeInSeconds <= 1.8) {
@@ -365,6 +600,28 @@ export default function App() {
     return Math.max(20, Math.round(rawScore));
   };
 
+  const awardCorrectAnswer = (points) => {
+    setCorrectCount(c => c + 1);
+    const newStreak = streak + 1;
+    if (newStreak > highestStreak) setHighestStreak(newStreak);
+
+    setTotalScore(s => s + points);
+    setStreak(newStreak);
+    
+    addPoints(points);
+    updateStreak(newStreak);
+
+    setFlashState('correct');
+    setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
+  };
+
+  const handleWrongAttempt = () => {
+    setStreak(0);
+    updateStreak(0);
+    setWrongTries(w => w + 1);
+    setFlashState('wrong');
+  };
+
   const handlePegSubmit = (e) => {
     if (e) e.preventDefault();
     if (!currentQuestion || inputValue.trim() === '' || flashState) return;
@@ -375,24 +632,14 @@ export default function App() {
     if (isCorrect) {
       const timeInSeconds = (Date.now() - questionStartTime) / 1000;
       const points = calculateQuestionPoints(timeInSeconds, wrongTries);
-
-      setCorrectCount(c => c + 1);
-      const newStreak = streak + 1;
-      if (newStreak > highestStreak) setHighestStreak(newStreak);
-
-      setTotalScore(s => s + points);
-      setStreak(newStreak);
-      setFlashState('correct');
-      setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
+      awardCorrectAnswer(points);
 
       setTimeout(() => {
         setFlashState(null);
         pickNextQuestion(availableQuestions);
       }, 250);
     } else {
-      setFlashState('wrong');
-      setStreak(0);
-      setWrongTries(w => w + 1);
+      handleWrongAttempt();
       
       if (!mistakes.find(m => m.correct === currentQuestion.num && m.guessed === guess)) {
         setMistakes(prev => [...prev, { 
@@ -427,16 +674,9 @@ export default function App() {
     if (isCorrect) {
       const timeInSeconds = (Date.now() - questionStartTime) / 1000;
       const points = calculateQuestionPoints(timeInSeconds, wrongTries);
-
-      setCorrectCount(c => c + 1);
-      setTotalScore(s => s + points);
-      setStreak(s => s + 1);
-      setFlashState('correct');
-      setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
+      awardCorrectAnswer(points);
     } else {
-      setStreak(0);
-      setWrongTries(w => w + 1);
-      setFlashState('wrong');
+      handleWrongAttempt();
       setMistakes(prev => [...prev, { type: 'president', num: currentQuestion.num, correctName: currentQuestion.correctName, guessed: guessName }]);
     }
     setTimeout(() => {
@@ -455,19 +695,9 @@ export default function App() {
     if (isCorrect) {
       const timeInSeconds = (Date.now() - questionStartTime) / 1000;
       const points = calculateQuestionPoints(timeInSeconds, wrongTries);
-
-      setCorrectCount(c => c + 1);
-      const newStreak = streak + 1;
-      if (newStreak > highestStreak) setHighestStreak(newStreak);
-
-      setTotalScore(s => s + points);
-      setStreak(newStreak);
-      setFlashState('correct');
-      setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
+      awardCorrectAnswer(points);
     } else {
-      setStreak(0);
-      setWrongTries(w => w + 1);
-      setFlashState('wrong');
+      handleWrongAttempt();
       setMistakes(prev => [...prev, { type: 'president', num: currentQuestion.num, correctName: currentQuestion.correctName, guessed: inputValue.trim() }]);
     }
     setTimeout(() => {
@@ -498,19 +728,9 @@ export default function App() {
     if (isCorrect) {
       const timeInSeconds = (Date.now() - questionStartTime) / 1000;
       const points = calculateQuestionPoints(timeInSeconds, wrongTries);
-
-      setCorrectCount(c => c + 1);
-      const newStreak = streak + 1;
-      if (newStreak > highestStreak) setHighestStreak(newStreak);
-
-      setTotalScore(s => s + points);
-      setStreak(newStreak);
-      setFlashState('correct');
-      setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
+      awardCorrectAnswer(points);
     } else {
-      setStreak(0);
-      setWrongTries(w => w + 1);
-      setFlashState('wrong');
+      handleWrongAttempt();
       setMistakes(prev => [...prev, { 
         type: 'president', 
         num: currentQuestion.num, 
@@ -542,13 +762,47 @@ export default function App() {
     }
   }, [route]);
 
+  const renderMenuHeader = () => (
+    <div className="fixed top-4 right-4 z-30">
+      {profile && (
+        <button
+          onClick={() => setIsProfileModalOpen(true)}
+          className="bg-white hover:bg-purple-50 border-2 border-purple-200 px-4 py-2 rounded-2xl shadow-sm flex items-center gap-3 transition-all"
+        >
+          <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center font-bold text-lg">
+            {profile.displayName.charAt(0).toUpperCase()}
+          </div>
+          <div className="text-left">
+            <div className="text-sm font-bold text-purple-900 leading-none flex items-center gap-1">
+              {profile.displayName} <Edit3 size={12} className="text-purple-400" />
+            </div>
+            <div className="text-xs font-bold text-purple-500">
+              {profile.totalScore} pts
+            </div>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+
   if (route === 'home') {
     return (
-      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
+        
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
         <div className="max-w-md w-full text-center">
           <h1 className="text-5xl md:text-6xl font-extrabold text-purple-800 mb-12 tracking-tight drop-shadow-sm">
             MemoQuiz
@@ -568,11 +822,22 @@ export default function App() {
 
   if (route === 'peg-menu') {
     return (
-      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
         <div className="max-w-md w-full">
           <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
             <ChevronLeft size={24} /> Back
@@ -593,11 +858,22 @@ export default function App() {
 
   if (route === 'presidents-menu') {
     return (
-      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
         <div className="max-w-md w-full">
           <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
             <ChevronLeft size={24} /> Back
@@ -706,11 +982,16 @@ export default function App() {
             <div className={`transition-all duration-700 transform ${revealStep >= 4 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} mt-4`}>
               <div className="bg-yellow-100 p-6 rounded-3xl border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg">
                 <div className="text-lg font-bold text-yellow-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
-                  <Flame size={22} /> Total Points
+                  <Flame size={22} /> Round Points
                 </div>
                 <div className="text-6xl md:text-7xl font-black text-yellow-500 drop-shadow-sm flex items-baseline gap-2">
                   {totalScore} <span className="text-2xl md:text-3xl text-yellow-600 opacity-80">pts</span>
                 </div>
+                {profile && (
+                  <div className="mt-2 text-sm font-bold text-yellow-700 bg-yellow-200/70 px-3 py-1 rounded-full">
+                    {profile.displayName}'s Total Career Score: {profile.totalScore} pts
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -811,13 +1092,14 @@ export default function App() {
         }
       `}</style>
 
+      {/* ACTIVE GAME HEADER */}
       <div className="py-3 px-4 flex items-center justify-between z-10 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <div className="bg-gray-100 px-3 py-1.5 rounded-xl text-gray-500 font-bold text-sm md:text-base border-2 border-gray-200">
             {totalQuestionsCount - availableQuestions.length + 1} <span className="opacity-50">/ {totalQuestionsCount}</span>
           </div>
           
-          <div className="relative flex items-center ml-2">
+          <div className="relative flex items-center ml-1">
             <div 
               style={{ 
                 transform: `scale(${
@@ -865,7 +1147,14 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {profile && (
+            <div className="hidden sm:flex items-center gap-1.5 bg-purple-50 border-2 border-purple-200 px-3 py-1 rounded-xl text-purple-800 text-sm font-bold">
+              <User size={15} className="text-purple-500" />
+              <span className="truncate max-w-[90px]">{profile.displayName}</span>
+            </div>
+          )}
+
           {gameConfig.type === 'peg' && gameConfig.mode === 'test' && timeLeft !== null && (
             <div className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl border-2 text-sm md:text-base transition-colors ${
               timeLeft <= 30 
@@ -885,6 +1174,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* MAIN PLAY AREA */}
       <div className="flex-1 flex flex-col items-center justify-between p-4 w-full max-w-xl mx-auto pb-6">
         {currentQuestion && (
           <div className="w-full flex flex-col items-center justify-between h-full">
@@ -896,8 +1186,12 @@ export default function App() {
                   {currentQuestion.imageUrl && !imgError ? (
                     <div className="mb-3 flex items-center justify-center">
                       <img 
+                        key={currentQuestion.imageUrl}
                         src={currentQuestion.imageUrl} 
                         alt={currentQuestion.word} 
+                        loading="eager"
+                        decoding="sync"
+                        fetchpriority="high"
                         onError={(e) => {
                           if (e.target.src.endsWith('.png')) {
                             e.target.src = e.target.src.replace(/\.png$/, '.jpg');
@@ -924,8 +1218,12 @@ export default function App() {
                   {(gameConfig.mode === 'easy' || gameConfig.mode === 'hard') && (
                     <div className="mb-4 bg-white p-2 rounded-2xl shadow-md border-2 border-purple-100">
                       <img 
+                        key={currentQuestion.imageUrl}
                         src={currentQuestion.imageUrl} 
                         alt="President Portrait" 
+                        loading="eager"
+                        decoding="sync"
+                        fetchpriority="high"
                         onError={(e) => {
                           if (e.target.src.endsWith('.jpg')) {
                             e.target.src = e.target.src.replace(/\.jpg$/, '.png');
