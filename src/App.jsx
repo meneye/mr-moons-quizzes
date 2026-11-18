@@ -1,33 +1,108 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X } from 'lucide-react';
 
-// Full 0-100 PEG list with matching emojis
+// Full 0-100 PEG list with matching emojis, dual-peg updates, and custom image paths (.png default with automatic .jpg fallback)
 const PEG_DATA = [
-  { num: 0, word: "Egg", emoji: "🥚" }, { num: 1, word: "Mirror", emoji: "🪞" }, { num: 2, word: "Swan", emoji: "🦢" }, { num: 3, word: "Fork", emoji: "🍴" },
-  { num: 4, word: "Car", emoji: "🚗" }, { num: 5, word: "Glove", emoji: "🧤" }, { num: 6, word: "Whistle", emoji: "😙" }, { num: 7, word: "Rainbow", emoji: "🌈" },
-  { num: 8, word: "Snowman", emoji: "⛄" }, { num: 9, word: "Balloon", emoji: "🎈" }, { num: 10, word: "Drum", emoji: "🥁" }, { num: 11, word: "Ski", emoji: "🎿" },
-  { num: 12, word: "Sun", emoji: "☀️" }, { num: 13, word: "Teenager", emoji: "👦" }, { num: 14, word: "Heart", emoji: "❤️" }, { num: 15, word: "Tennis", emoji: "🎾" },
-  { num: 16, word: "Driver's License", emoji: "🪪" }, { num: 17, word: "Magazine", emoji: "📰" }, { num: 18, word: "Octopus", emoji: "🐙" }, { num: 19, word: "Golf", emoji: "⛳" },
-  { num: 20, word: "Crown", emoji: "👑" }, { num: 21, word: "Polling Station", emoji: "🗳️" }, { num: 22, word: "Bingo Ball", emoji: "🎱" }, { num: 23, word: "Jersey", emoji: "🎽" },
-  { num: 24, word: "Clapperboard", emoji: "🎬" }, { num: 25, word: "Present", emoji: "🎁" }, { num: 26, word: "Foot", emoji: "🦶" }, { num: 27, word: "Land", emoji: "🏝️" },
-  { num: 28, word: "Saturn", emoji: "🪐" }, { num: 29, word: "Calendar", emoji: "📅" }, { num: 30, word: "Seal", emoji: "🦭" }, { num: 31, word: "Fireworks", emoji: "🎆" },
-  { num: 32, word: "Teeth", emoji: "🦷" }, { num: 33, word: "Mickey Mouse", emoji: "🐭" }, { num: 34, word: "Pizza", emoji: "🍕" }, { num: 35, word: "Camera", emoji: "📷" },
-  { num: 36, word: "Compass", emoji: "🧭" }, { num: 37, word: "Hand", emoji: "✋" }, { num: 38, word: "Thermometer", emoji: "🌡️" }, { num: 39, word: "Tank", emoji: "🪖" },
-  { num: 40, word: "Thief", emoji: "🥷" }, { num: 41, word: "Mozart", emoji: "🎹" }, { num: 42, word: "Oil Barrel", emoji: "🛢️" }, { num: 43, word: "Grinch", emoji: "👹" },
-  { num: 44, word: "Twins", emoji: "👯" }, { num: 45, word: "Dove", emoji: "🕊️" }, { num: 46, word: "Diaper", emoji: "🧷" }, { num: 47, word: "Airplane", emoji: "✈️" },
-  { num: 48, word: "Cello", emoji: "🎻" }, { num: 49, word: "Moose", emoji: "🦌" }, { num: 50, word: "Flag", emoji: "🚩" }, { num: 51, word: "Aliens", emoji: "👽" },
-  { num: 52, word: "Cards", emoji: "🃏" }, { num: 53, word: "Joker", emoji: "🤡" }, { num: 54, word: "Rubik's Cube", emoji: "🧊" }, { num: 55, word: "Double Nickel", emoji: "🪙" },
-  { num: 56, word: "Shopping Mall", emoji: "🛍️" }, { num: 57, word: "Ketchup", emoji: "🍅" }, { num: 58, word: "Lego", emoji: "🧱" }, { num: 59, word: "Slide", emoji: "🛝" },
-  { num: 60, word: "Watch", emoji: "⌚" }, { num: 61, word: "Barbie Doll", emoji: "👱‍♀️" }, { num: 62, word: "Guitar", emoji: "🎸" }, { num: 63, word: "Color TV", emoji: "📺" },
-  { num: 64, word: "Chessboard", emoji: "♟️" }, { num: 65, word: "Dinosaur", emoji: "🦖" }, { num: 66, word: "Evil", emoji: "😈" }, { num: 67, word: "ATM", emoji: "🏧" },
-  { num: 68, word: "Bee", emoji: "🐝" }, { num: 69, word: "Astronaut", emoji: "🧑‍🚀" }, { num: 70, word: "Hockey", emoji: "🏒" }, { num: 71, word: "Starbucks", emoji: "☕" },
-  { num: 72, word: "Water", emoji: "💧" }, { num: 73, word: "Cell Phone", emoji: "📱" }, { num: 74, word: "Calculator", emoji: "🖩" }, { num: 75, word: "Diamond", emoji: "💎" },
-  { num: 76, word: "Mattress", emoji: "🛏️" }, { num: 77, word: "Lottery Ticket", emoji: "🎫" }, { num: 78, word: "Vinyl Record", emoji: "💿" }, { num: 79, word: "Key", emoji: "🔑" },
-  { num: 80, word: "Tower Floor", emoji: "🏢" }, { num: 81, word: "Sudoku", emoji: "🔢" }, { num: 82, word: "NBA", emoji: "🏀" }, { num: 83, word: "Wrestler", emoji: "🤼" },
-  { num: 84, word: "Apple Mac", emoji: "💻" }, { num: 85, word: "Paper", emoji: "📄" }, { num: 86, word: "Comet", emoji: "☄️" }, { num: 87, word: "Boomerang", emoji: "🪃" },
-  { num: 88, word: "Piano", emoji: "🎹" }, { num: 89, word: "Mummy", emoji: "🤕" }, { num: 90, word: "Soccerball", emoji: "⚽" }, { num: 91, word: "Pokemon", emoji: "⚡" },
-  { num: 92, word: "Cartoon Network", emoji: "📺" }, { num: 93, word: "Volcano", emoji: "🌋" }, { num: 94, word: "Coca Cola", emoji: "🥤" }, { num: 95, word: "Briefcase", emoji: "💼" },
-  { num: 96, word: "Smiley Face", emoji: "😊" }, { num: 97, word: "Harry Potter", emoji: "🧙‍♂️" }, { num: 98, word: "Playstation", emoji: "🎮" }, { num: 99, word: "Ice Cream", emoji: "🍦" },
+  { num: 0, word: "Egg", emoji: "🥚" }, 
+  { num: 1, word: "Mirror", emoji: "🪞" }, 
+  { num: 2, word: "Swan", emoji: "🦢" }, 
+  { num: 3, word: "Fork", emoji: "🍴" },
+  { num: 4, word: "Car", emoji: "🚗" }, 
+  { num: 5, word: "Glove", emoji: "🧤" }, 
+  { num: 6, word: "Whistle", emoji: "😙", imageUrl: "/pegs/Whistle.png" }, 
+  { num: 7, word: "Rainbow", emoji: "🌈" },
+  { num: 8, word: "Snowman", emoji: "⛄" }, 
+  { num: 9, word: "Balloon", emoji: "🎈" }, 
+  { num: 10, word: "Drum", emoji: "🥁" }, 
+  { num: 11, word: "Ski", emoji: "🎿" },
+  { num: 12, word: "Sun", emoji: "☀️" }, 
+  { num: 13, word: "Teenager", emoji: "👦" }, 
+  { num: 14, word: "Heart", emoji: "❤️" }, 
+  { num: 15, word: "Tennis", emoji: "🎾" },
+  { num: 16, word: "Driver's License / Pawns", emoji: "🪪 ♟️" }, 
+  { num: 17, word: "Magazine", emoji: "🤩", imageUrl: "/pegs/Magazine.png" }, 
+  { num: 18, word: "Octopus / Driver's License", emoji: "🐙 🪪" }, 
+  { num: 19, word: "Golf", emoji: "⛳" },
+  { num: 20, word: "Crown / Vision", emoji: "👑 👁️" }, 
+  { num: 21, word: "Polling Station", emoji: "🗳️" }, 
+  { num: 22, word: "Bingo Ball", emoji: "🎱", imageUrl: "/pegs/Bingo Ball.png" }, 
+  { num: 23, word: "Jersey", emoji: "🎽" },
+  { num: 24, word: "Clapperboard", emoji: "🎬" }, 
+  { num: 25, word: "Present", emoji: "🎁" }, 
+  { num: 26, word: "Foot", emoji: "🦶" }, 
+  { num: 27, word: "Land", emoji: "🏝️" },
+  { num: 28, word: "Saturn", emoji: "🪐" }, 
+  { num: 29, word: "Calendar", emoji: "📅" }, 
+  { num: 30, word: "Seal", emoji: "🦭" }, 
+  { num: 31, word: "Fireworks", emoji: "🎆" },
+  { num: 32, word: "Teeth", emoji: "🦷" }, 
+  { num: 33, word: "Mickey Mouse", emoji: "🐭", imageUrl: "/pegs/Mickey Mouse.png" }, 
+  { num: 34, word: "Pizza", emoji: "🍕" }, 
+  { num: 35, word: "Camera", emoji: "📷" },
+  { num: 36, word: "Compass", emoji: "🧭" }, 
+  { num: 37, word: "Hand", emoji: "✋" }, 
+  { num: 38, word: "Thermometer", emoji: "🌡️" }, 
+  { num: 39, word: "Tank", emoji: "🪖", imageUrl: "/pegs/Tank.png" },
+  { num: 40, word: "Thief", emoji: "🥷" }, 
+  { num: 41, word: "Mozart", emoji: "🎹", imageUrl: "/pegs/Mozart.png" }, 
+  { num: 42, word: "Oil Barrel", emoji: "🛢️" }, 
+  { num: 43, word: "Grinch", emoji: "👹", imageUrl: "/pegs/Grinch.png" },
+  { num: 44, word: "Twins", emoji: "👯" }, 
+  { num: 45, word: "Dove", emoji: "🕊️" }, 
+  { num: 46, word: "Diaper", emoji: "🩲" }, 
+  { num: 47, word: "Airplane", emoji: "✈️" },
+  { num: 48, word: "Cello / Monkey", emoji: "🎻 🐒" }, 
+  { num: 49, word: "Moose", emoji: "🦌" }, 
+  { num: 50, word: "Flag", emoji: "🏳️" }, 
+  { num: 51, word: "Aliens", emoji: "👽" },
+  { num: 52, word: "Cards", emoji: "🂡" }, 
+  { num: 53, word: "Joker", emoji: "🃏" }, 
+  { num: 54, word: "Rubik's Cube", emoji: "🧊", imageUrl: "/pegs/Rubick's Cube.png" }, 
+  { num: 55, word: "Double Nickel", emoji: "🪙" },
+  { num: 56, word: "Shopping Mall", emoji: "🛍️" }, 
+  { num: 57, word: "Ketchup", emoji: "🍅" }, 
+  { num: 58, word: "Lego", emoji: "👷" }, 
+  { num: 59, word: "Slide", emoji: "🛝" },
+  { num: 60, word: "Watch", emoji: "⌚" }, 
+  { num: 61, word: "Barbie Doll", emoji: "👱‍♀️" }, 
+  { num: 62, word: "Guitar", emoji: "🎸" }, 
+  { num: 63, word: "Color TV", emoji: "📺" },
+  { num: 64, word: "Chessboard", emoji: "♟️", imageUrl: "/pegs/Chessboard.png" }, 
+  { num: 65, word: "Dinosaur", emoji: "🦖" }, 
+  { num: 66, word: "Evil / Dominos", emoji: "😈 🀞" }, 
+  { num: 67, word: "ATM", emoji: "🏪" },
+  { num: 68, word: "Bee", emoji: "🐝" }, 
+  { num: 69, word: "Astronaut / Ying Yang", emoji: "🧑‍🚀 ☯︎" }, 
+  { num: 70, word: "Hockey", emoji: "🏒" }, 
+  { num: 71, word: "Starbucks", emoji: "☕" },
+  { num: 72, word: "Water", emoji: "💧" }, 
+  { num: 73, word: "Cell Phone", emoji: "📱" }, 
+  { num: 74, word: "Calculator", emoji: "🖩" }, 
+  { num: 75, word: "Diamond", emoji: "💎" },
+  { num: 76, word: "Mattress", emoji: "🛏️" }, 
+  { num: 77, word: "Lottery Ticket", emoji: "🎫" }, 
+  { num: 78, word: "Vinyl Record", emoji: "💿" }, 
+  { num: 79, word: "Key", emoji: "🔑" },
+  { num: 80, word: "Tower Floor", emoji: "🏢" }, 
+  { num: 81, word: "Sudoku", emoji: "🔢" }, 
+  { num: 82, word: "NBA", emoji: "🏀" }, 
+  { num: 83, word: "Wrestler", emoji: "🤼" },
+  { num: 84, word: "Apple Mac", emoji: "💻" }, 
+  { num: 85, word: "Paper", emoji: "📄" }, 
+  { num: 86, word: "Comet", emoji: "☄️" }, 
+  { num: 87, word: "Boomerang", emoji: "🪃" },
+  { num: 88, word: "Piano", emoji: "🎹" }, 
+  { num: 89, word: "Mummy", emoji: "🧟", imageUrl: "/pegs/Mummy.png" }, 
+  { num: 90, word: "Soccerball", emoji: "⚽" }, 
+  { num: 91, word: "Pokemon", emoji: "⚡", imageUrl: "/pegs/Pokemon.png" },
+  { num: 92, word: "Cartoon Network", emoji: "🅲𝐍" }, 
+  { num: 93, word: "Volcano", emoji: "🌋" }, 
+  { num: 94, word: "Coca Cola", emoji: "🥤" }, 
+  { num: 95, word: "Briefcase", emoji: "💼" },
+  { num: 96, word: "Smiley Face", emoji: "😊" }, 
+  { num: 97, word: "Harry Potter", emoji: "🧙‍♂️", imageUrl: "/pegs/Harry Potter.png" }, 
+  { num: 98, word: "Playstation", emoji: "🎮" }, 
+  { num: 99, word: "Ice Cream", emoji: "🍦" },
   { num: 100, word: "Trophy", emoji: "🏆" }
 ];
 
@@ -91,49 +166,116 @@ const getOrdinal = (n) => {
 };
 
 export default function App() {
-  const [route, setRoute] = useState('home');
+  const [route, setRoute] = useState('home'); 
   const [gameConfig, setGameConfig] = useState({ type: null, mode: null, total: 0 });
-  const [score, setScore] = useState(0);
-
+  const [totalScore, setTotalScore] = useState(0);
+  const [displayScore, setDisplayScore] = useState(0);
+  
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [availableQuestions, setAvailableQuestions] = useState([]);
-  const [currentOptions, setCurrentOptions] = useState([]);
+  const [currentOptions, setCurrentOptions] = useState([]); 
   const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
-
+  
   const [inputValue, setInputValue] = useState('');
-  const [inputOrder, setInputOrder] = useState('');
-
+  const [inputOrder, setInputOrder] = useState(''); 
+  
   const [streak, setStreak] = useState(0);
   const [highestStreak, setHighestStreak] = useState(0);
   const [mistakes, setMistakes] = useState([]);
-  const [correctCount, setCorrectCount] = useState(0);
-
+  const [correctCount, setCorrectCount] = useState(0); 
+  const [wrongTries, setWrongTries] = useState(0);
+  
   const [floatingPoint, setFloatingPoint] = useState(null);
+  const [scoreBump, setScoreBump] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [totalTime, setTotalTime] = useState(0);
-  const [flashState, setFlashState] = useState(null);
+  const [flashState, setFlashState] = useState(null); 
   const [questionStartTime, setQuestionStartTime] = useState(null);
-
+  const [imgError, setImgError] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
+  
   const inputRef = useRef(null);
   const orderRef = useRef(null);
   const nameRef = useRef(null);
 
-  // End Screen Animation State
   const [revealStep, setRevealStep] = useState(0);
 
-  // ---------- INITIALIZATION LOGIC ---------- //
+  // Smoothly animate the score counting up when totalScore increases
+  useEffect(() => {
+    if (totalScore === 0) {
+      setDisplayScore(0);
+      return;
+    }
+    
+    let startVal = displayScore;
+    const endVal = totalScore;
+    if (startVal === endVal) return;
+
+    setScoreBump(true);
+    const bumpTimer = setTimeout(() => setScoreBump(false), 300);
+
+    const duration = 350;
+    const startTimeAnim = performance.now();
+
+    const animateScore = (now) => {
+      const progress = Math.min((now - startTimeAnim) / duration, 1);
+      // Ease out quad for smooth deceleration
+      const easeOut = progress * (2 - progress);
+      const current = Math.round(startVal + (endVal - startVal) * easeOut);
+      setDisplayScore(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animateScore);
+      } else {
+        setDisplayScore(endVal);
+      }
+    };
+
+    requestAnimationFrame(animateScore);
+    return () => clearTimeout(bumpTimer);
+  }, [totalScore]);
+
+  // Clear floating points quickly after animation finishes
+  useEffect(() => {
+    if (floatingPoint) {
+      const timer = setTimeout(() => {
+        setFloatingPoint(null);
+      }, 550);
+      return () => clearTimeout(timer);
+    }
+  }, [floatingPoint]);
+
+  // 5-Minute Countdown Timer for PEG Test Mode
+  useEffect(() => {
+    if (route === 'peg-test' && timeLeft !== null) {
+      if (timeLeft <= 0) {
+        setTotalTime(300);
+        setRoute('end');
+        return;
+      }
+      const timer = setInterval(() => {
+        setTimeLeft(prev => (prev !== null ? prev - 1 : null));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [route, timeLeft]);
 
   const resetGameState = () => {
-    setScore(0);
+    setTotalScore(0);
+    setDisplayScore(0);
     setStreak(0);
     setHighestStreak(0);
     setMistakes([]);
     setCorrectCount(0);
+    setWrongTries(0);
+    setFloatingPoint(null);
     setStartTime(Date.now());
     setQuestionStartTime(Date.now());
     setInputValue('');
     setInputOrder('');
     setRevealStep(0);
+    setImgError(false);
+    setTimeLeft(null);
   };
 
   const initGame = (type, mode) => {
@@ -142,8 +284,11 @@ export default function App() {
     let shuffled = [];
 
     if (type === 'peg') {
-      total = mode === 'practice' ? 25 : 50;
+      total = mode === 'practice' ? 25 : PEG_DATA.length;
       shuffled = [...PEG_DATA].sort(() => Math.random() - 0.5).slice(0, total);
+      if (mode === 'test') {
+        setTimeLeft(300); // 5 minutes (300 seconds)
+      }
     } else if (type === 'presidents') {
       total = mode === 'easy' ? 10 : mode === 'medium' ? 20 : 30;
       shuffled = [...PRESIDENTS_DATA].sort(() => Math.random() - 0.5).slice(0, total);
@@ -154,7 +299,7 @@ export default function App() {
     setAvailableQuestions(shuffled);
     setCurrentQuestion(shuffled[0]);
     setRoute(`${type}-${mode}`);
-
+    
     if (type === 'presidents' && mode === 'easy') {
       generateOptions(shuffled[0]);
     } else {
@@ -167,9 +312,9 @@ export default function App() {
 
   const generateOptions = (correctQ) => {
     const others = PRESIDENTS_DATA.filter(p => p.num !== correctQ.num)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map(p => p.correctName);
+                                  .sort(() => Math.random() - 0.5)
+                                  .slice(0, 3)
+                                  .map(p => p.correctName);
     const options = [...others, correctQ.correctName].sort(() => Math.random() - 0.5);
     setCurrentOptions(options);
   };
@@ -189,8 +334,10 @@ export default function App() {
     setCurrentQuestion(nextList[0]);
     setInputValue('');
     setInputOrder('');
+    setWrongTries(0);
     setQuestionStartTime(Date.now());
-
+    setImgError(false);
+    
     if (gameConfig.type === 'presidents' && gameConfig.mode === 'easy') {
       generateOptions(nextList[0]);
     } else {
@@ -201,13 +348,21 @@ export default function App() {
     }
   };
 
-  // ---------- SUBMIT LOGIC ---------- //
+  // Speed-Decay & Wrong-Try Penalty Scoring Formula (20 to 100 pts per question)
+  const calculateQuestionPoints = (timeInSeconds, currentWrongTries) => {
+    let basePoints = 40;
+    if (timeInSeconds <= 1.8) {
+      basePoints = 100;
+    } else if (timeInSeconds <= 5) {
+      basePoints = 100 - ((timeInSeconds - 1.8) / 3.2) * 20;
+    } else if (timeInSeconds <= 15) {
+      basePoints = 80 - ((timeInSeconds - 5) * 4);
+    } else {
+      basePoints = 40;
+    }
 
-  const calculatePoints = () => {
-    const responseTime = (Date.now() - questionStartTime) / 1000;
-    const questionTimer = 20;
-    const cappedTime = Math.min(responseTime, questionTimer);
-    return Math.floor((1 - ((cappedTime / questionTimer) / 2)) * 10);
+    const rawScore = basePoints - (currentWrongTries * 20);
+    return Math.max(20, Math.round(rawScore));
   };
 
   const handlePegSubmit = (e) => {
@@ -218,12 +373,14 @@ export default function App() {
     const isCorrect = guess === currentQuestion.num;
 
     if (isCorrect) {
+      const timeInSeconds = (Date.now() - questionStartTime) / 1000;
+      const points = calculateQuestionPoints(timeInSeconds, wrongTries);
+
       setCorrectCount(c => c + 1);
       const newStreak = streak + 1;
       if (newStreak > highestStreak) setHighestStreak(newStreak);
 
-      const points = calculatePoints();
-      setScore(s => s + points);
+      setTotalScore(s => s + points);
       setStreak(newStreak);
       setFlashState('correct');
       setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
@@ -235,14 +392,20 @@ export default function App() {
     } else {
       setFlashState('wrong');
       setStreak(0);
+      setWrongTries(w => w + 1);
       
       if (!mistakes.find(m => m.correct === currentQuestion.num && m.guessed === guess)) {
-        setMistakes(prev => [...prev, { type: 'peg', word: currentQuestion.word, emoji: currentQuestion.emoji, correct: currentQuestion.num, guessed: isNaN(guess) ? 'Blank' : guess }]);
+        setMistakes(prev => [...prev, { 
+          type: 'peg', 
+          word: currentQuestion.word, 
+          emoji: currentQuestion.emoji, 
+          imageUrl: currentQuestion.imageUrl,
+          correct: currentQuestion.num, 
+          guessed: isNaN(guess) ? 'Blank' : guess 
+        }]);
       }
 
       if (gameConfig.mode === 'test') {
-        setScore(s => s - 1);
-        setFloatingPoint({ id: Date.now(), text: '-1', type: 'negative' });
         setTimeout(() => {
           setFlashState(null);
           pickNextQuestion(availableQuestions);
@@ -260,16 +423,19 @@ export default function App() {
   const handlePresidentsEasySubmit = (guessName) => {
     if (flashState) return;
     const isCorrect = guessName === currentQuestion.correctName;
-
+    
     if (isCorrect) {
+      const timeInSeconds = (Date.now() - questionStartTime) / 1000;
+      const points = calculateQuestionPoints(timeInSeconds, wrongTries);
+
       setCorrectCount(c => c + 1);
-      const points = calculatePoints();
-      setScore(s => s + points);
+      setTotalScore(s => s + points);
       setStreak(s => s + 1);
       setFlashState('correct');
       setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
     } else {
       setStreak(0);
+      setWrongTries(w => w + 1);
       setFlashState('wrong');
       setMistakes(prev => [...prev, { type: 'president', num: currentQuestion.num, correctName: currentQuestion.correctName, guessed: guessName }]);
     }
@@ -282,26 +448,27 @@ export default function App() {
   const handlePresidentsMediumSubmit = (e) => {
     if (e) e.preventDefault();
     if (!currentQuestion || inputValue.trim() === '' || flashState) return;
-
+    
     const guess = inputValue.trim().toLowerCase();
     const isCorrect = currentQuestion.answers.some(ans => ans.toLowerCase() === guess);
 
     if (isCorrect) {
+      const timeInSeconds = (Date.now() - questionStartTime) / 1000;
+      const points = calculateQuestionPoints(timeInSeconds, wrongTries);
+
       setCorrectCount(c => c + 1);
       const newStreak = streak + 1;
       if (newStreak > highestStreak) setHighestStreak(newStreak);
 
-      const points = calculatePoints();
-      setScore(s => s + points);
+      setTotalScore(s => s + points);
       setStreak(newStreak);
       setFlashState('correct');
       setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
     } else {
-      setScore(s => s - 1);
       setStreak(0);
+      setWrongTries(w => w + 1);
       setFlashState('wrong');
       setMistakes(prev => [...prev, { type: 'president', num: currentQuestion.num, correctName: currentQuestion.correctName, guessed: inputValue.trim() }]);
-      setFloatingPoint({ id: Date.now(), text: '-1', type: 'negative' });
     }
     setTimeout(() => {
       setFlashState(null);
@@ -312,13 +479,13 @@ export default function App() {
   const handlePresidentsHardSubmit = (e) => {
     if (e) e.preventDefault();
     if (!currentQuestion || inputValue.trim() === '' || inputOrder.trim() === '' || flashState) return;
-
+    
     const guessName = inputValue.trim().toLowerCase();
     const guessOrder = parseInt(inputOrder.trim(), 10);
-
+    
     const isNameCorrect = currentQuestion.answers.some(ans => ans.toLowerCase() === guessName);
     let isOrderCorrect = guessOrder === currentQuestion.num;
-
+    
     if (currentQuestion.correctName === "Grover Cleveland" && (guessOrder === 22 || guessOrder === 24)) {
         isOrderCorrect = true;
     }
@@ -329,18 +496,20 @@ export default function App() {
     const isCorrect = isNameCorrect && isOrderCorrect;
 
     if (isCorrect) {
+      const timeInSeconds = (Date.now() - questionStartTime) / 1000;
+      const points = calculateQuestionPoints(timeInSeconds, wrongTries);
+
       setCorrectCount(c => c + 1);
       const newStreak = streak + 1;
       if (newStreak > highestStreak) setHighestStreak(newStreak);
 
-      const points = calculatePoints();
-      setScore(s => s + points);
+      setTotalScore(s => s + points);
       setStreak(newStreak);
       setFlashState('correct');
       setFloatingPoint({ id: Date.now(), text: `+${points}`, type: 'positive' });
     } else {
-      setScore(s => s - 1);
       setStreak(0);
+      setWrongTries(w => w + 1);
       setFlashState('wrong');
       setMistakes(prev => [...prev, { 
         type: 'president', 
@@ -348,7 +517,6 @@ export default function App() {
         correctName: currentQuestion.correctName, 
         guessed: `${guessOrder || '?'} - ${inputValue.trim() || '?'}` 
       }]);
-      setFloatingPoint({ id: Date.now(), text: '-1', type: 'negative' });
     }
     setTimeout(() => {
       setFlashState(null);
@@ -356,15 +524,12 @@ export default function App() {
     }, 300);
   };
 
-  // ---------- RENDER HELPERS ---------- //
-
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Trigger End Screen Animations
   useEffect(() => {
     if (route === 'end') {
       let step = 0;
@@ -377,24 +542,22 @@ export default function App() {
     }
   }, [route]);
 
-  // ---------- SCREENS ---------- //
-
   if (route === 'home') {
     return (
-      <div className="min-h-[100dvh] bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
         <div className="max-w-md w-full text-center">
-          <h1 className="text-6xl md:text-7xl font-extrabold text-purple-800 mb-12 tracking-tight drop-shadow-sm">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-purple-800 mb-12 tracking-tight drop-shadow-sm">
             MemoQuiz
           </h1>
           <div className="flex flex-col gap-4">
-            <button onClick={() => setRoute('peg-menu')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider shadow-md">
+            <button onClick={() => setRoute('peg-menu')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
               PEG
             </button>
-            <button onClick={() => setRoute('presidents-menu')} className="w-full bg-white hover:bg-purple-50 text-purple-500 border-2 border-purple-200 font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-200 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider shadow-md">
+            <button onClick={() => setRoute('presidents-menu')} className="w-full bg-white hover:bg-gray-50 text-purple-500 border-2 border-purple-200 font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-200 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
               Presidents
             </button>
           </div>
@@ -405,21 +568,21 @@ export default function App() {
 
   if (route === 'peg-menu') {
     return (
-      <div className="min-h-[100dvh] bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
         <div className="max-w-md w-full">
           <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
-            <ChevronLeft size={26} /> Back
+            <ChevronLeft size={24} /> Back
           </button>
-          <h2 className="text-4xl font-extrabold text-purple-800 mb-6 text-center tracking-wide">PEG System</h2>
+          <h2 className="text-4xl font-extrabold text-purple-800 mb-8 text-center">PEG Practice</h2>
           <div className="flex flex-col gap-4">
-            <button onClick={() => initGame('peg', 'practice')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-900 font-bold text-2xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide shadow-sm">
+            <button onClick={() => initGame('peg', 'practice')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Practice
             </button>
-            <button onClick={() => initGame('peg', 'test')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all tracking-wide shadow-sm">
+            <button onClick={() => initGame('peg', 'test')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Test
             </button>
           </div>
@@ -430,24 +593,24 @@ export default function App() {
 
   if (route === 'presidents-menu') {
     return (
-      <div className="min-h-[100dvh] bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
           * { font-family: 'Bubblegum Sans', cursive !important; }
         `}</style>
         <div className="max-w-md w-full">
           <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
-            <ChevronLeft size={26} /> Back
+            <ChevronLeft size={24} /> Back
           </button>
-          <h2 className="text-4xl font-extrabold text-purple-800 mb-6 text-center tracking-wide">Presidents</h2>
+          <h2 className="text-4xl font-extrabold text-purple-800 mb-8 text-center">Presidents</h2>
           <div className="flex flex-col gap-4">
-            <button onClick={() => initGame('presidents', 'easy')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-900 font-bold text-2xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide shadow-sm">
+            <button onClick={() => initGame('presidents', 'easy')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Easy
             </button>
-            <button onClick={() => initGame('presidents', 'medium')} className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide shadow-sm">
+            <button onClick={() => initGame('presidents', 'medium')} className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Medium
             </button>
-            <button onClick={() => initGame('presidents', 'hard')} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xl py-4 rounded-2xl border-b-8 border-purple-800 active:border-b-0 active:mt-[8px] transition-all tracking-wide shadow-sm">
+            <button onClick={() => initGame('presidents', 'hard')} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-800 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Hard
             </button>
           </div>
@@ -465,7 +628,7 @@ export default function App() {
       "Mistakes are stepping stones to learning!",
       "Take a deep breath, you've got this."
     ];
-
+    
     const lowMistakesMessages = [
       "Your hard work is paying off.",
       "I can see your practice is paying off.",
@@ -545,8 +708,8 @@ export default function App() {
                 <div className="text-lg font-bold text-yellow-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
                   <Flame size={22} /> Total Points
                 </div>
-                <div className="text-6xl md:text-7xl font-black text-yellow-500 drop-shadow-sm">
-                  {score % 1 !== 0 ? score.toFixed(2) : score}
+                <div className="text-6xl md:text-7xl font-black text-yellow-500 drop-shadow-sm flex items-baseline gap-2">
+                  {totalScore} <span className="text-2xl md:text-3xl text-yellow-600 opacity-80">pts</span>
                 </div>
               </div>
             </div>
@@ -571,7 +734,22 @@ export default function App() {
                       {m.type === 'peg' ? (
                         <>
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">{m.emoji}</span>
+                            {m.imageUrl ? (
+                              <img 
+                                src={m.imageUrl} 
+                                alt={m.word} 
+                                className="w-10 h-10 object-contain rounded-lg"
+                                onError={(e) => {
+                                  if (e.target.src.endsWith('.png')) {
+                                    e.target.src = e.target.src.replace(/\.png$/, '.jpg');
+                                  } else {
+                                    e.target.style.display = 'none';
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-2xl">{m.emoji}</span>
+                            )}
                             <span className="text-base font-bold text-gray-800">{m.word}</span>
                           </div>
                           <div className="text-right">
@@ -601,44 +779,101 @@ export default function App() {
     );
   }
 
-  // ---------- ACTIVE GAME UI (ZERO-SCROLL MOBILE OPTIMIZED) ---------- //
-
   return (
     <div className={`h-[100dvh] flex flex-col font-sans overflow-hidden transition-colors duration-200 ${
       flashState === 'correct' ? 'bg-green-400' : 
       flashState === 'wrong' ? 'bg-red-400' : 'bg-white'
     }`}>
-
+      
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
         * { font-family: 'Bubblegum Sans', cursive !important; }
-        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(1.3); } }
-        .animate-float { animation: floatUp 0.8s ease-out forwards; }
+        @keyframes pointPopMerge {
+          0% { opacity: 0; transform: translateY(14px) scale(0.5); }
+          35% { opacity: 1; transform: translateY(-6px) scale(1.25); }
+          75% { opacity: 1; transform: translateY(-10px) scale(1.1); }
+          100% { opacity: 0; transform: translateY(-22px) translateX(-12px) scale(0.6); }
+        }
+        .animate-point-pop { animation: pointPopMerge 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        @keyframes fireGlow {
+          0%, 100% { filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.85)) drop-shadow(0 -3px 10px rgba(239, 68, 68, 0.65)); }
+          50% { filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.95)) drop-shadow(0 -6px 16px rgba(250, 204, 21, 0.9)); }
+        }
+        .on-fire-points {
+          animation: fireGlow 1s infinite ease-in-out;
+        }
+        @keyframes blueFireGlow {
+          0%, 100% { filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.85)) drop-shadow(0 -3px 10px rgba(37, 99, 235, 0.65)); }
+          50% { filter: drop-shadow(0 0 14px rgba(37, 99, 235, 0.95)) drop-shadow(0 -6px 18px rgba(56, 189, 248, 0.95)); }
+        }
+        .on-blue-fire-points {
+          animation: blueFireGlow 0.8s infinite ease-in-out;
+        }
       `}</style>
 
-      {/* TOP HEADER */}
       <div className="py-3 px-4 flex items-center justify-between z-10 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div className="bg-gray-100 px-3 py-1.5 rounded-xl text-gray-500 font-bold text-sm md:text-base border-2 border-gray-200">
             {totalQuestionsCount - availableQuestions.length + 1} <span className="opacity-50">/ {totalQuestionsCount}</span>
           </div>
-          <div className="relative flex items-center">
-            <div className="text-purple-600 font-black text-xl md:text-2xl min-w-[2.5rem]">
-              {score % 1 !== 0 ? score.toFixed(2) : score}
+          
+          <div className="relative flex items-center ml-2">
+            <div 
+              style={{ 
+                transform: `scale(${
+                  streak >= 15 
+                    ? (scoreBump ? 1.65 : 1.5) 
+                    : streak >= 5 
+                      ? (scoreBump ? 1.45 : 1.3) 
+                      : (scoreBump ? 1.25 : 1)
+                })` 
+              }}
+              className={`font-black text-2xl md:text-3xl min-w-[3.5rem] flex items-baseline gap-1 transition-all duration-300 origin-left ${
+                streak >= 15 
+                  ? 'text-blue-500 on-blue-fire-points'
+                  : streak >= 5 
+                    ? 'text-orange-500 on-fire-points' 
+                    : scoreBump 
+                      ? 'text-green-600' 
+                      : 'text-purple-600'
+              }`}
+            >
+              {streak >= 5 && (
+                <Flame 
+                  className={`w-6 h-6 animate-bounce self-center -mr-0.5 ${streak >= 15 ? 'text-blue-500' : 'text-orange-500'}`} 
+                  fill="currentColor" 
+                />
+              )}
+              <span>{displayScore}</span>
+              <span className={`text-sm md:text-base font-bold ${
+                streak >= 15 
+                  ? 'text-cyan-500' 
+                  : streak >= 5 
+                    ? 'text-red-500' 
+                    : 'text-purple-400'
+              }`}>pts</span>
             </div>
+            
             {floatingPoint && (
-              <div key={floatingPoint.id} className={`absolute left-full ml-2 text-xl font-black animate-float pointer-events-none whitespace-nowrap ${floatingPoint.type === 'positive' ? 'text-green-500' : 'text-red-500'}`}>
-                {floatingPoint.text}
+              <div 
+                key={floatingPoint.id} 
+                className="absolute left-full ml-6 bg-green-500 text-white px-2.5 py-0.5 rounded-full text-lg md:text-xl font-black animate-point-pop pointer-events-none whitespace-nowrap shadow-md border-2 border-white flex items-baseline gap-0.5 z-30"
+              >
+                {floatingPoint.text} <span className="text-xs font-bold opacity-90">pts</span>
               </div>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {streak > 0 && (
-            <div className={`flex items-center gap-1 font-bold ${streak >= 3 ? 'text-orange-500 animate-bounce' : 'text-gray-400'}`} style={{ transform: `scale(${Math.min(1 + (streak * 0.05), 1.4)})` }}>
-              <Flame className="w-5 h-5" fill="currentColor" />
-              <span className="text-lg">{streak}</span>
+          {gameConfig.type === 'peg' && gameConfig.mode === 'test' && timeLeft !== null && (
+            <div className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-xl border-2 text-sm md:text-base transition-colors ${
+              timeLeft <= 30 
+                ? 'bg-red-100 text-red-600 border-red-300 animate-pulse' 
+                : 'bg-purple-50 text-purple-700 border-purple-200'
+            }`}>
+              <Clock size={18} />
+              <span>{formatTime(timeLeft)}</span>
             </div>
           )}
           <button 
@@ -650,19 +885,34 @@ export default function App() {
         </div>
       </div>
 
-      {/* MAIN PLAY AREA */}
       <div className="flex-1 flex flex-col items-center justify-between p-4 w-full max-w-xl mx-auto pb-6">
         {currentQuestion && (
           <div className="w-full flex flex-col items-center justify-between h-full">
             
-            {/* QUESTION DISPLAY */}
             <div className="flex flex-col items-center justify-center flex-1 w-full my-auto">
               
               {gameConfig.type === 'peg' && (
                 <>
-                  <div className="text-[90px] md:text-[120px] leading-none mb-3 drop-shadow-md select-none transform transition-transform hover:scale-105">
-                    {currentQuestion.emoji}
-                  </div>
+                  {currentQuestion.imageUrl && !imgError ? (
+                    <div className="mb-3 flex items-center justify-center">
+                      <img 
+                        src={currentQuestion.imageUrl} 
+                        alt={currentQuestion.word} 
+                        onError={(e) => {
+                          if (e.target.src.endsWith('.png')) {
+                            e.target.src = e.target.src.replace(/\.png$/, '.jpg');
+                          } else {
+                            setImgError(true);
+                          }
+                        }}
+                        className="w-[115px] h-[115px] md:w-[150px] md:h-[150px] object-contain rounded-2xl drop-shadow-md transform transition-transform hover:scale-105"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-[115px] md:text-[150px] leading-none mb-3 drop-shadow-md select-none transform transition-transform hover:scale-105 text-center">
+                      {currentQuestion.emoji}
+                    </div>
+                  )}
                   <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 capitalize text-center">
                     {currentQuestion.word}
                   </h2>
@@ -677,8 +927,12 @@ export default function App() {
                         src={currentQuestion.imageUrl} 
                         alt="President Portrait" 
                         onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentQuestion.correctName)}&background=random&color=fff&size=400`;
+                          if (e.target.src.endsWith('.jpg')) {
+                            e.target.src = e.target.src.replace(/\.jpg$/, '.png');
+                          } else {
+                            e.target.onerror = null;
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentQuestion.correctName)}&background=random&color=fff&size=400`;
+                          }
                         }}
                         className="w-40 h-52 md:w-48 md:h-60 object-cover rounded-xl bg-gray-200 object-top"
                       />
@@ -704,10 +958,8 @@ export default function App() {
               )}
             </div>
 
-            {/* INPUT / ANSWER AREA */}
             <div className="w-full mt-auto">
               
-              {/* Peg & Presidents Medium: Single Input */}
               {(gameConfig.type === 'peg' || gameConfig.mode === 'medium') && (
                 <form onSubmit={gameConfig.type === 'peg' ? handlePegSubmit : handlePresidentsMediumSubmit} className="flex flex-col gap-2.5 w-full">
                   <input 
@@ -731,7 +983,6 @@ export default function App() {
                 </form>
               )}
 
-              {/* Presidents Easy: Multiple Choice */}
               {gameConfig.mode === 'easy' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 w-full">
                   {currentOptions.map((opt, i) => (
@@ -747,7 +998,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Presidents Hard: Double Input */}
               {gameConfig.mode === 'hard' && (
                 <form onSubmit={handlePresidentsHardSubmit} className="flex flex-col gap-2.5 w-full">
                   <div className="flex gap-2">
