@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X, User, Edit3, RotateCcw } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X, User, Edit3, RotateCcw, Lock } from 'lucide-react';
 
 // ==========================================
 // 1. CUSTOM HOOK: useProfile (localStorage)
@@ -40,7 +40,18 @@ export function useProfile() {
     saveProfile({
       displayName: trimmed,
       totalScore: 0,
-      streak: 0
+      streak: 0,
+      track: null
+    });
+  }, [saveProfile]);
+
+  const selectTrack = useCallback((track) => {
+    saveProfile((prev) => {
+      if (!prev || prev.track) return prev;
+      return {
+        ...prev,
+        track
+      };
     });
   }, [saveProfile]);
 
@@ -78,6 +89,7 @@ export function useProfile() {
   return {
     profile,
     createProfile,
+    selectTrack,
     addPoints,
     updateStreak,
     updateDisplayName,
@@ -317,9 +329,9 @@ const PRESIDENTS_DATA = [
   { num: 19, correctName: "Rutherford B. Hayes", answers: ["Hayes", "Rutherford B. Hayes", "Rutherford Hayes", "Rutherford B Hayes"] },
   { num: 20, correctName: "James A. Garfield", answers: ["Garfield", "James A. Garfield", "James Garfield", "James A Garfield"] },
   { num: 21, correctName: "Chester A. Arthur", answers: ["Arthur", "Chester A. Arthur", "Chester Arthur", "Chester A Arthur"] },
-  { num: 22, correctName: "Grover Cleveland", answers: ["Cleveland", "Grover Cleveland"] },
+  { num: 22, validOrders: [22, 24], correctName: "Grover Cleveland", answers: ["Cleveland", "Grover Cleveland"] },
   { num: 23, correctName: "Benjamin Harrison", answers: ["Harrison", "Benjamin Harrison"] },
-  { num: 24, correctName: "Grover Cleveland", answers: ["Cleveland", "Grover Cleveland"] },
+  { num: 24, validOrders: [22, 24], correctName: "Grover Cleveland", answers: ["Cleveland", "Grover Cleveland"] },
   { num: 25, correctName: "William McKinley", answers: ["McKinley", "William McKinley"] },
   { num: 26, correctName: "Theodore Roosevelt", answers: ["Roosevelt", "Theodore Roosevelt", "Teddy Roosevelt"] },
   { num: 27, correctName: "William Howard Taft", answers: ["Taft", "William Howard Taft", "William Taft"] },
@@ -340,11 +352,12 @@ const PRESIDENTS_DATA = [
   { num: 42, correctName: "Bill Clinton", answers: ["Clinton", "Bill Clinton", "William Clinton"] },
   { num: 43, correctName: "George W. Bush", answers: ["Bush", "George W. Bush", "George W Bush", "George Bush"] },
   { num: 44, correctName: "Barack Obama", answers: ["Obama", "Barack Obama"] },
-  { num: 45, correctName: "Donald Trump", answers: ["Trump", "Donald Trump"] },
+  { num: 45, validOrders: [45, 47], correctName: "Donald Trump", answers: ["Trump", "Donald Trump"] },
   { num: 46, correctName: "Joe Biden", answers: ["Biden", "Joe Biden", "Joseph Biden"] },
-  { num: 47, correctName: "Donald Trump", answers: ["Trump", "Donald Trump"] }
+  { num: 47, validOrders: [45, 47], correctName: "Donald Trump", answers: ["Trump", "Donald Trump"] }
 ].map(p => ({
   ...p,
+  validOrders: p.validOrders || [p.num],
   imageUrl: `/presidents/${p.num}.jpg`
 }));
 
@@ -353,6 +366,65 @@ const getOrdinal = (n) => {
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+// ==========================================
+// HUMAN CALENDAR DATA
+// ==========================================
+const HC_CENTURIES_DATA = [
+  { label: "2000", displayAnswer: "-2", answers: ["-2"] },
+  { label: "1900", displayAnswer: "-1", answers: ["-1"] },
+  { label: "1800", displayAnswer: "+1", answers: ["+1", "1"] },
+  { label: "1700", displayAnswer: "+3", answers: ["+3", "3"] },
+  { label: "1600", displayAnswer: "-2", answers: ["-2"] }
+];
+
+// Values for Years 1-100 (HERO=0, BUN=1, SHOE=2, TREE=3, DOOR=4, HIVE=5, CHICKENS=6)
+const HC_YEAR_VALUES = [
+  1, 2, 3, 5, 6, 0, 1, 3, 4, 5, // 1-10
+  6, 1, 2, 3, 4, 6, 0, 1, 2, 4, // 11-20
+  5, 6, 0, 2, 3, 4, 5, 0, 1, 2, // 21-30
+  3, 5, 6, 0, 1, 3, 4, 5, 6, 1, // 31-40
+  2, 3, 4, 6, 0, 1, 2, 4, 5, 6, // 41-50
+  0, 2, 3, 4, 5, 0, 1, 2, 3, 5, // 51-60
+  6, 0, 1, 3, 4, 5, 6, 1, 2, 3, // 61-70
+  4, 6, 0, 1, 2, 4, 5, 6, 0, 2, // 71-80
+  3, 4, 5, 0, 1, 2, 3, 5, 6, 0, // 81-90
+  1, 3, 4, 5, 6, 1, 2, 3, 4, 0  // 91-100
+];
+
+const HC_YEARS_DATA = HC_YEAR_VALUES.map((val, idx) => {
+  const num = idx + 1;
+  const pegMatch = PEG_DATA.find(p => p.num === num);
+  return {
+    num,
+    answer: val,
+    hint: pegMatch ? pegMatch.word : ""
+  };
+});
+
+const HC_MONTHS_DATA = [
+  { name: "January-1", answer: 1 },
+  { name: "February-2", answer: 4 },
+  { name: "March-3", answer: 4 },
+  { name: "April-4", answer: 0 },
+  { name: "May-5", answer: 2 },
+  { name: "June-6", answer: 5 },
+  { name: "July-7", answer: 0 },
+  { name: "August-8", answer: 3 },
+  { name: "September-9", answer: 6 },
+  { name: "October-10", answer: 1 },
+  { name: "November-11", answer: 4 },
+  { name: "December-12", answer: 6 }
+];
+
+const HC_DAYS_DATA = Array.from({ length: 31 }, (_, idx) => {
+  const day = idx + 1;
+  return {
+    day,
+    label: `${getOrdinal(day)} day`,
+    answer: day % 7
+  };
+});
 
 // Helper to preload a list of image URLs into browser memory
 const preloadImageUrl = (url) => {
@@ -364,11 +436,20 @@ const preloadImageUrl = (url) => {
 
 export default function App() {
   // Hook into Arcade Profile
-  const { profile, createProfile, addPoints, updateStreak, updateDisplayName, resetProfile } = useProfile();
+  const { profile, createProfile, selectTrack, addPoints, updateStreak, updateDisplayName, resetProfile } = useProfile();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  const [route, setRoute] = useState('home'); 
-  const [gameConfig, setGameConfig] = useState({ type: null, mode: null, total: 0 });
+  const [route, setRoute] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (parsed?.track === 'speed-math') return 'speed-math-menu';
+      if (parsed?.track === 'super-memory') return 'super-memory-menu';
+    } catch (e) {}
+    return 'home';
+  });
+  const selectedTrack = profile?.track || 'super-memory';
+  const [gameConfig, setGameConfig] = useState({ type: null, mode: null, range: null, total: 0 });
   const [totalScore, setTotalScore] = useState(0);
   const [displayScore, setDisplayScore] = useState(0);
   
@@ -394,12 +475,37 @@ export default function App() {
   const [questionStartTime, setQuestionStartTime] = useState(null);
   const [imgError, setImgError] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [showHint, setShowHint] = useState(false);
+
+  // Password Lock State for Human Calendar -> Years
+  const [isYearsUnlocked, setIsYearsUnlocked] = useState(false);
+  const [isYearPasswordModalOpen, setIsYearPasswordModalOpen] = useState(false);
+  const [yearPasswordInput, setYearPasswordInput] = useState('');
+  const [yearPasswordError, setYearPasswordError] = useState(false);
   
   const inputRef = useRef(null);
   const orderRef = useRef(null);
   const nameRef = useRef(null);
+  const yearPassInputRef = useRef(null);
 
   const [revealStep, setRevealStep] = useState(0);
+
+  // Sync route with profile track binding (resetting profile returns to track selection)
+  useEffect(() => {
+    if (!profile) {
+      setRoute('home');
+      setIsYearsUnlocked(false);
+      setIsYearPasswordModalOpen(false);
+    } else if (profile.track && route === 'home') {
+      setRoute(profile.track === 'speed-math' ? 'speed-math-menu' : 'super-memory-menu');
+    }
+  }, [profile, route]);
+
+  useEffect(() => {
+    if (isYearPasswordModalOpen) {
+      setTimeout(() => yearPassInputRef.current?.focus(), 50);
+    }
+  }, [isYearPasswordModalOpen]);
 
   // ==========================================
   // FAST IMAGE PRELOADER (Eliminates PNG delay)
@@ -508,9 +614,10 @@ export default function App() {
     setRevealStep(0);
     setImgError(false);
     setTimeLeft(null);
+    setShowHint(false);
   };
 
-  const initGame = (type, mode) => {
+  const initGame = (type, mode, range = null) => {
     resetGameState();
     let total = 0;
     let shuffled = [];
@@ -524,13 +631,26 @@ export default function App() {
     } else if (type === 'presidents') {
       total = mode === 'easy' ? 10 : mode === 'medium' ? 20 : 30;
       shuffled = [...PRESIDENTS_DATA].sort(() => Math.random() - 0.5).slice(0, total);
+    } else if (type === 'human-calendar') {
+      if (mode === 'centuries') {
+        shuffled = [...HC_CENTURIES_DATA].sort(() => Math.random() - 0.5);
+      } else if (mode === 'years') {
+        const [minYear, maxYear] = range || [1, 25];
+        shuffled = HC_YEARS_DATA.filter(y => y.num >= minYear && y.num <= maxYear)
+                                .sort(() => Math.random() - 0.5);
+      } else if (mode === 'months') {
+        shuffled = [...HC_MONTHS_DATA].sort(() => Math.random() - 0.5);
+      } else if (mode === 'days') {
+        shuffled = [...HC_DAYS_DATA].sort(() => Math.random() - 0.5);
+      }
+      total = shuffled.length;
     }
 
     shuffled.slice(0, 5).forEach(q => {
       if (q.imageUrl) preloadImageUrl(q.imageUrl);
     });
 
-    setGameConfig({ type, mode, total });
+    setGameConfig({ type, mode, range, total });
     setTotalQuestionsCount(total);
     setAvailableQuestions(shuffled);
     setCurrentQuestion(shuffled[0]);
@@ -573,6 +693,7 @@ export default function App() {
     setWrongTries(0);
     setQuestionStartTime(Date.now());
     setImgError(false);
+    setShowHint(false);
     
     if (gameConfig.type === 'presidents' && gameConfig.mode === 'easy') {
       generateOptions(nextList[0]);
@@ -688,7 +809,7 @@ export default function App() {
   const handlePresidentsMediumSubmit = (e) => {
     if (e) e.preventDefault();
     if (!currentQuestion || inputValue.trim() === '' || flashState) return;
-    
+
     const guess = inputValue.trim().toLowerCase();
     const isCorrect = currentQuestion.answers.some(ans => ans.toLowerCase() === guess);
 
@@ -698,31 +819,29 @@ export default function App() {
       awardCorrectAnswer(points);
     } else {
       handleWrongAttempt();
-      setMistakes(prev => [...prev, { type: 'president', num: currentQuestion.num, correctName: currentQuestion.correctName, guessed: inputValue.trim() }]);
+      setMistakes(prev => [...prev, {
+        type: 'president',
+        num: currentQuestion.num,
+        correctName: currentQuestion.correctName,
+        guessed: inputValue.trim()
+      }]);
     }
     setTimeout(() => {
       setFlashState(null);
       pickNextQuestion(availableQuestions);
-    }, 250);
+    }, 300);
   };
 
   const handlePresidentsHardSubmit = (e) => {
     if (e) e.preventDefault();
     if (!currentQuestion || inputValue.trim() === '' || inputOrder.trim() === '' || flashState) return;
-    
+
     const guessName = inputValue.trim().toLowerCase();
     const guessOrder = parseInt(inputOrder.trim(), 10);
-    
-    const isNameCorrect = currentQuestion.answers.some(ans => ans.toLowerCase() === guessName);
-    let isOrderCorrect = guessOrder === currentQuestion.num;
-    
-    if (currentQuestion.correctName === "Grover Cleveland" && (guessOrder === 22 || guessOrder === 24)) {
-        isOrderCorrect = true;
-    }
-    if (currentQuestion.correctName === "Donald Trump" && (guessOrder === 45 || guessOrder === 47)) {
-        isOrderCorrect = true;
-    }
 
+    const isNameCorrect = currentQuestion.answers.some(ans => ans.toLowerCase() === guessName);
+    const validOrders = currentQuestion.validOrders || [currentQuestion.num];
+    const isOrderCorrect = validOrders.includes(guessOrder);
     const isCorrect = isNameCorrect && isOrderCorrect;
 
     if (isCorrect) {
@@ -731,17 +850,79 @@ export default function App() {
       awardCorrectAnswer(points);
     } else {
       handleWrongAttempt();
-      setMistakes(prev => [...prev, { 
-        type: 'president', 
-        num: currentQuestion.num, 
-        correctName: currentQuestion.correctName, 
-        guessed: `${guessOrder || '?'} - ${inputValue.trim() || '?'}` 
+      setMistakes(prev => [...prev, {
+        type: 'president',
+        num: currentQuestion.num,
+        correctName: currentQuestion.correctName,
+        guessed: `${isNaN(guessOrder) ? '?' : guessOrder} - ${inputValue.trim() || '?'}`
       }]);
     }
     setTimeout(() => {
       setFlashState(null);
       pickNextQuestion(availableQuestions);
     }, 300);
+  };
+
+  const handleHumanCalendarSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!currentQuestion || inputValue.trim() === '' || flashState) return;
+
+    const rawInput = inputValue.trim();
+    let isCorrect = false;
+    let promptLabel = '';
+    let correctDisplay = '';
+
+    if (gameConfig.mode === 'centuries') {
+      isCorrect = currentQuestion.answers.includes(rawInput);
+      promptLabel = `Value/Code of ${currentQuestion.label}`;
+      correctDisplay = currentQuestion.displayAnswer;
+    } else if (gameConfig.mode === 'years') {
+      const guessNum = parseInt(rawInput, 10);
+      isCorrect = !isNaN(guessNum) && guessNum === currentQuestion.answer;
+      promptLabel = `Value/Code of ${currentQuestion.num}`;
+      correctDisplay = String(currentQuestion.answer);
+    } else if (gameConfig.mode === 'months') {
+      const guessNum = parseInt(rawInput, 10);
+      isCorrect = !isNaN(guessNum) && guessNum === currentQuestion.answer;
+      promptLabel = `Value/Code of ${currentQuestion.name}`;
+      correctDisplay = String(currentQuestion.answer);
+    } else if (gameConfig.mode === 'days') {
+      const guessNum = parseInt(rawInput, 10);
+      isCorrect = !isNaN(guessNum) && guessNum === currentQuestion.answer;
+      promptLabel = `Value/Code of ${currentQuestion.label}`;
+      correctDisplay = String(currentQuestion.answer);
+    }
+
+    if (isCorrect) {
+      setCorrectCount(c => c + 1);
+      setShowHint(false);
+      setFlashState('correct');
+
+      setTimeout(() => {
+        setFlashState(null);
+        pickNextQuestion(availableQuestions);
+      }, 250);
+    } else {
+      setFlashState('wrong');
+      if (gameConfig.mode === 'years') {
+        setShowHint(true);
+      }
+
+      if (!mistakes.find(m => m.type === 'human-calendar' && m.label === promptLabel && m.guessed === rawInput)) {
+        setMistakes(prev => [...prev, {
+          type: 'human-calendar',
+          label: promptLabel,
+          correct: correctDisplay,
+          guessed: rawInput
+        }]);
+      }
+
+      setTimeout(() => {
+        setFlashState(null);
+        setInputValue('');
+        if (inputRef.current) inputRef.current.focus();
+      }, 250);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -803,16 +984,261 @@ export default function App() {
         />
         {renderMenuHeader()}
 
-        <div className="max-w-md w-full text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-purple-800 mb-12 tracking-tight drop-shadow-sm">
+        <div className="max-w-xl w-full text-center">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-purple-800 mb-4 tracking-tight drop-shadow-sm">
             MemoQuiz
           </h1>
+          <p className="text-purple-500 text-lg md:text-xl font-bold mb-10">
+            Choose your track to begin
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => {
+                selectTrack('speed-math');
+                setRoute('speed-math-menu');
+              }}
+              className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-8 px-3 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider flex items-center justify-center"
+            >
+              Speed Math
+            </button>
+            <button
+              onClick={() => {
+                selectTrack('super-memory');
+                setRoute('super-memory-menu');
+              }}
+              className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-8 px-3 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider flex items-center justify-center"
+            >
+              Super Memory
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (route === 'speed-math-menu') {
+    return (
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+          * { font-family: 'Bubblegum Sans', cursive !important; }
+        `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
+        <div className="max-w-md w-full">
+          <h2 className="text-5xl font-extrabold text-purple-800 mb-8 text-center">Speed Math</h2>
           <div className="flex flex-col gap-4">
-            <button onClick={() => setRoute('peg-menu')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
+            <button onClick={() => setRoute('peg-menu')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
               PEG
             </button>
-            <button onClick={() => setRoute('presidents-menu')} className="w-full bg-white hover:bg-gray-50 text-purple-500 border-2 border-purple-200 font-bold text-3xl py-4 rounded-2xl border-b-8 border-purple-200 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
+            <button onClick={() => setRoute('human-calendar-menu')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
+              Human Calendar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (route === 'super-memory-menu') {
+    return (
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+          * { font-family: 'Bubblegum Sans', cursive !important; }
+        `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
+        <div className="max-w-md w-full">
+          <h2 className="text-5xl font-extrabold text-purple-800 mb-8 text-center">Super Memory</h2>
+          <div className="flex flex-col gap-4">
+            <button onClick={() => setRoute('peg-menu')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
+              PEG
+            </button>
+            <button onClick={() => setRoute('presidents-menu')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider">
               Presidents
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (route === 'human-calendar-menu') {
+    const handleYearPasswordSubmit = (e) => {
+      e.preventDefault();
+      if (yearPasswordInput.trim() === '7777') {
+        setIsYearsUnlocked(true);
+        setIsYearPasswordModalOpen(false);
+        setYearPasswordInput('');
+        setYearPasswordError(false);
+        setRoute('hc-years-menu');
+      } else {
+        setYearPasswordError(true);
+        setYearPasswordInput('');
+        yearPassInputRef.current?.focus();
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+          * { font-family: 'Bubblegum Sans', cursive !important; }
+        `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
+        {isYearPasswordModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950/75 backdrop-blur-sm p-4">
+            <div className="bg-white border-4 border-purple-300 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center">
+              <button
+                onClick={() => {
+                  setIsYearPasswordModalOpen(false);
+                  setYearPasswordInput('');
+                  setYearPasswordError(false);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-100 p-2 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center border-2 border-purple-200">
+                <Lock size={32} />
+              </div>
+
+              <h3 className="text-3xl font-extrabold text-purple-900 mb-1">Years Locked</h3>
+              <p className="text-purple-500 text-base mb-5">Enter password to unlock</p>
+
+              <form onSubmit={handleYearPasswordSubmit} className="flex flex-col gap-3">
+                <input
+                  ref={yearPassInputRef}
+                  type="password"
+                  inputMode="numeric"
+                  value={yearPasswordInput}
+                  onChange={(e) => {
+                    setYearPasswordInput(e.target.value);
+                    if (yearPasswordError) setYearPasswordError(false);
+                  }}
+                  placeholder="Password..."
+                  className={`w-full text-center text-2xl font-bold text-purple-900 border-2 rounded-2xl py-3 px-4 focus:outline-none transition-all bg-white ${
+                    yearPasswordError
+                      ? 'border-red-400 bg-red-50 placeholder:text-red-300'
+                      : 'border-purple-300 focus:border-purple-500 focus:bg-purple-50 placeholder:text-purple-300'
+                  }`}
+                />
+                {yearPasswordError && (
+                  <p className="text-red-500 text-sm font-bold">Incorrect password. Try again!</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!yearPasswordInput.trim()}
+                  className="w-full bg-purple-500 hover:bg-purple-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-8 border-purple-700 disabled:border-gray-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider"
+                >
+                  Unlock
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-md w-full">
+          <button onClick={() => setRoute('speed-math-menu')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
+            <ChevronLeft size={24} /> Back
+          </button>
+          <h2 className="text-5xl font-extrabold text-purple-800 mb-8 text-center">Human Calendar</h2>
+          <div className="flex flex-col gap-4">
+            <button onClick={() => initGame('human-calendar', 'centuries')} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              Centuries
+            </button>
+            <button
+              onClick={() => {
+                if (isYearsUnlocked) {
+                  setRoute('hc-years-menu');
+                } else {
+                  setYearPasswordInput('');
+                  setYearPasswordError(false);
+                  setIsYearPasswordModalOpen(true);
+                }
+              }}
+              className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide flex items-center justify-center gap-3"
+            >
+              {!isYearsUnlocked && <Lock size={24} />}
+              <span>Years</span>
+            </button>
+            <button onClick={() => initGame('human-calendar', 'months')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              Months
+            </button>
+            <button onClick={() => initGame('human-calendar', 'days')} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-800 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              Days
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (route === 'hc-years-menu') {
+    return (
+      <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+          * { font-family: 'Bubblegum Sans', cursive !important; }
+        `}</style>
+
+        <ArcadeProfileOverlay
+          profile={profile}
+          onCreate={createProfile}
+          onUpdateName={updateDisplayName}
+          onReset={resetProfile}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+        />
+        {renderMenuHeader()}
+
+        <div className="max-w-md w-full">
+          <button onClick={() => setRoute('human-calendar-menu')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
+            <ChevronLeft size={24} /> Back
+          </button>
+          <h2 className="text-5xl font-extrabold text-purple-800 mb-8 text-center">Years</h2>
+          <div className="flex flex-col gap-4">
+            <button onClick={() => initGame('human-calendar', 'years', [1, 25])} className="w-full bg-purple-200 hover:bg-purple-100 text-purple-800 font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-400 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              1 - 25
+            </button>
+            <button onClick={() => initGame('human-calendar', 'years', [26, 50])} className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              26 - 50
+            </button>
+            <button onClick={() => initGame('human-calendar', 'years', [51, 75])} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              51 - 75
+            </button>
+            <button onClick={() => initGame('human-calendar', 'years', [76, 100])} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-800 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
+              76 - 100
             </button>
           </div>
         </div>
@@ -839,7 +1265,10 @@ export default function App() {
         {renderMenuHeader()}
 
         <div className="max-w-md w-full">
-          <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
+          <button
+            onClick={() => setRoute(selectedTrack === 'speed-math' ? 'speed-math-menu' : 'super-memory-menu')}
+            className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl"
+          >
             <ChevronLeft size={24} /> Back
           </button>
           <h2 className="text-4xl font-extrabold text-purple-800 mb-8 text-center">PEG Practice</h2>
@@ -875,7 +1304,7 @@ export default function App() {
         {renderMenuHeader()}
 
         <div className="max-w-md w-full">
-          <button onClick={() => setRoute('home')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
+          <button onClick={() => setRoute('super-memory-menu')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
             <ChevronLeft size={24} /> Back
           </button>
           <h2 className="text-4xl font-extrabold text-purple-800 mb-8 text-center">Presidents</h2>
@@ -915,7 +1344,8 @@ export default function App() {
     ];
 
     const messageList = mistakes.length > 4 ? highMistakesMessages : lowMistakesMessages;
-    const randomEncouragement = messageList[Math.floor(Math.random() * messageList.length)];
+    const encouragementIndex = (totalTime + correctCount + mistakes.length) % messageList.length;
+    const randomEncouragement = messageList[encouragementIndex];
 
     return (
       <div className="min-h-[100dvh] bg-gray-100 flex flex-col items-center py-6 px-4 font-sans overflow-y-auto w-full relative transition-colors duration-500">
@@ -930,7 +1360,16 @@ export default function App() {
         `}</style>
         
         {revealStep >= 5 && (
-          <button onClick={() => setRoute(`${gameConfig.type}-menu`)} className="absolute top-6 left-6 text-gray-400 hover:text-gray-800 transition-colors bg-white p-2 rounded-full shadow-sm border border-gray-200 z-20">
+          <button
+            onClick={() => {
+              if (gameConfig.type === 'human-calendar') {
+                setRoute(gameConfig.mode === 'years' ? 'hc-years-menu' : 'human-calendar-menu');
+              } else {
+                setRoute(`${gameConfig.type}-menu`);
+              }
+            }}
+            className="absolute top-6 left-6 text-gray-400 hover:text-gray-800 transition-colors bg-white p-2 rounded-full shadow-sm border border-gray-200 z-20"
+          >
             <X size={32} />
           </button>
         )}
@@ -979,26 +1418,28 @@ export default function App() {
               </div>
             </div>
 
-            <div className={`transition-all duration-700 transform ${revealStep >= 4 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} mt-4`}>
-              <div className="bg-yellow-100 p-6 rounded-3xl border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg">
-                <div className="text-lg font-bold text-yellow-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
-                  <Flame size={22} /> Round Points
-                </div>
-                <div className="text-6xl md:text-7xl font-black text-yellow-500 drop-shadow-sm flex items-baseline gap-2">
-                  {totalScore} <span className="text-2xl md:text-3xl text-yellow-600 opacity-80">pts</span>
-                </div>
-                {profile && (
-                  <div className="mt-2 text-sm font-bold text-yellow-700 bg-yellow-200/70 px-3 py-1 rounded-full">
-                    {profile.displayName}'s Total Career Score: {profile.totalScore} pts
+            {gameConfig.type !== 'human-calendar' && (
+              <div className={`transition-all duration-700 transform ${revealStep >= 4 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} mt-4`}>
+                <div className="bg-yellow-100 p-6 rounded-3xl border-4 border-yellow-400 flex flex-col items-center justify-center shadow-lg">
+                  <div className="text-lg font-bold text-yellow-600 uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
+                    <Flame size={22} /> Round Points
                   </div>
-                )}
+                  <div className="text-6xl md:text-7xl font-black text-yellow-500 drop-shadow-sm flex items-baseline gap-2">
+                    {totalScore} <span className="text-2xl md:text-3xl text-yellow-600 opacity-80">pts</span>
+                  </div>
+                  {profile && (
+                    <div className="mt-2 text-sm font-bold text-yellow-700 bg-yellow-200/70 px-3 py-1 rounded-full">
+                      {profile.displayName}'s Total Career Score: {profile.totalScore} pts
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className={`w-full transition-all duration-500 transform ${revealStep >= 5 ? 'opacity-100' : 'opacity-0 pointer-events-none'} mt-4 px-4 pb-12`}>
             <button 
-              onClick={() => initGame(gameConfig.type, gameConfig.mode)}
+              onClick={() => initGame(gameConfig.type, gameConfig.mode, gameConfig.range)}
               className="w-full bg-white text-gray-900 hover:bg-gray-50 font-black text-2xl py-4 rounded-2xl border-2 border-b-8 border-gray-300 active:border-b-2 active:mt-[6px] transition-all uppercase tracking-wider shadow-md mb-8"
             >
               Try Again
@@ -1035,6 +1476,16 @@ export default function App() {
                           </div>
                           <div className="text-right">
                             <div className="text-xs text-red-500 font-bold line-through">You: {m.guessed}</div>
+                            <div className="text-base text-green-600 font-black">Correct: {m.correct}</div>
+                          </div>
+                        </>
+                      ) : m.type === 'human-calendar' ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <span className="text-base font-bold text-gray-800">{m.label}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-red-500 font-bold line-through">You: {m.guessed || "Blank"}</div>
                             <div className="text-base text-green-600 font-black">Correct: {m.correct}</div>
                           </div>
                         </>
@@ -1090,6 +1541,13 @@ export default function App() {
         .on-blue-fire-points {
           animation: blueFireGlow 0.8s infinite ease-in-out;
         }
+        @keyframes hintPopIn {
+          0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-hint-pop {
+          animation: hintPopIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
       `}</style>
 
       {/* ACTIVE GAME HEADER */}
@@ -1099,52 +1557,54 @@ export default function App() {
             {totalQuestionsCount - availableQuestions.length + 1} <span className="opacity-50">/ {totalQuestionsCount}</span>
           </div>
           
-          <div className="relative flex items-center ml-1">
-            <div 
-              style={{ 
-                transform: `scale(${
-                  streak >= 15 
-                    ? (scoreBump ? 1.65 : 1.5) 
-                    : streak >= 5 
-                      ? (scoreBump ? 1.45 : 1.3) 
-                      : (scoreBump ? 1.25 : 1)
-                })` 
-              }}
-              className={`font-black text-2xl md:text-3xl min-w-[3.5rem] flex items-baseline gap-1 transition-all duration-300 origin-left ${
-                streak >= 15 
-                  ? 'text-blue-500 on-blue-fire-points'
-                  : streak >= 5 
-                    ? 'text-orange-500 on-fire-points' 
-                    : scoreBump 
-                      ? 'text-green-600' 
-                      : 'text-purple-600'
-              }`}
-            >
-              {streak >= 5 && (
-                <Flame 
-                  className={`w-6 h-6 animate-bounce self-center -mr-0.5 ${streak >= 15 ? 'text-blue-500' : 'text-orange-500'}`} 
-                  fill="currentColor" 
-                />
-              )}
-              <span>{displayScore}</span>
-              <span className={`text-sm md:text-base font-bold ${
-                streak >= 15 
-                  ? 'text-cyan-500' 
-                  : streak >= 5 
-                    ? 'text-red-500' 
-                    : 'text-purple-400'
-              }`}>pts</span>
-            </div>
-            
-            {floatingPoint && (
+          {gameConfig.type !== 'human-calendar' && (
+            <div className="relative flex items-center ml-1">
               <div 
-                key={floatingPoint.id} 
-                className="absolute left-full ml-6 bg-green-500 text-white px-2.5 py-0.5 rounded-full text-lg md:text-xl font-black animate-point-pop pointer-events-none whitespace-nowrap shadow-md border-2 border-white flex items-baseline gap-0.5 z-30"
+                style={{ 
+                  transform: `scale(${
+                    streak >= 15 
+                      ? (scoreBump ? 1.65 : 1.5) 
+                      : streak >= 5 
+                        ? (scoreBump ? 1.45 : 1.3) 
+                        : (scoreBump ? 1.25 : 1)
+                  })` 
+                }}
+                className={`font-black text-2xl md:text-3xl min-w-[3.5rem] flex items-baseline gap-1 transition-all duration-300 origin-left ${
+                  streak >= 15 
+                    ? 'text-blue-500 on-blue-fire-points'
+                    : streak >= 5 
+                      ? 'text-orange-500 on-fire-points' 
+                      : scoreBump 
+                        ? 'text-green-600' 
+                        : 'text-purple-600'
+                }`}
               >
-                {floatingPoint.text} <span className="text-xs font-bold opacity-90">pts</span>
+                {streak >= 5 && (
+                  <Flame 
+                    className={`w-6 h-6 animate-bounce self-center -mr-0.5 ${streak >= 15 ? 'text-blue-500' : 'text-orange-500'}`} 
+                    fill="currentColor" 
+                  />
+                )}
+                <span>{displayScore}</span>
+                <span className={`text-sm md:text-base font-bold ${
+                  streak >= 15 
+                    ? 'text-cyan-500' 
+                    : streak >= 5 
+                      ? 'text-red-500' 
+                      : 'text-purple-400'
+                }`}>pts</span>
               </div>
-            )}
-          </div>
+              
+              {floatingPoint && (
+                <div 
+                  key={floatingPoint.id} 
+                  className="absolute left-full ml-6 bg-green-500 text-white px-2.5 py-0.5 rounded-full text-lg md:text-xl font-black animate-point-pop pointer-events-none whitespace-nowrap shadow-md border-2 border-white flex items-baseline gap-0.5 z-30"
+                >
+                  {floatingPoint.text} <span className="text-xs font-bold opacity-90">pts</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
@@ -1191,7 +1651,7 @@ export default function App() {
                         alt={currentQuestion.word} 
                         loading="eager"
                         decoding="sync"
-                        fetchpriority="high"
+                        fetchPriority="high"
                         onError={(e) => {
                           if (e.target.src.endsWith('.png')) {
                             e.target.src = e.target.src.replace(/\.png$/, '.jpg');
@@ -1223,7 +1683,7 @@ export default function App() {
                         alt="President Portrait" 
                         loading="eager"
                         decoding="sync"
-                        fetchpriority="high"
+                        fetchPriority="high"
                         onError={(e) => {
                           if (e.target.src.endsWith('.jpg')) {
                             e.target.src = e.target.src.replace(/\.jpg$/, '.png');
@@ -1254,28 +1714,63 @@ export default function App() {
                   )}
                 </>
               )}
+
+              {gameConfig.type === 'human-calendar' && (
+                <div className="flex flex-col items-center justify-center text-center">
+                  <div className="text-xl md:text-2xl font-bold text-purple-400 uppercase tracking-wider mb-2">
+                    Value/Code of
+                  </div>
+                  <h2 className="text-5xl md:text-7xl font-extrabold text-purple-800 drop-shadow-sm leading-tight">
+                    {gameConfig.mode === 'centuries' && `${currentQuestion.label}?`}
+                    {gameConfig.mode === 'years' && currentQuestion.num}
+                    {gameConfig.mode === 'months' && currentQuestion.name}
+                    {gameConfig.mode === 'days' && currentQuestion.label}
+                  </h2>
+
+                  {gameConfig.mode === 'years' && showHint && currentQuestion.hint && (
+                    <div className="mt-5 animate-hint-pop bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-5 py-2.5 rounded-2xl shadow-md flex items-center gap-2 text-xl md:text-2xl font-bold">
+                      <span>💡</span>
+                      <span>{currentQuestion.hint}...</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="w-full mt-auto">
               
-              {(gameConfig.type === 'peg' || gameConfig.mode === 'medium') && (
-                <form onSubmit={gameConfig.type === 'peg' ? handlePegSubmit : handlePresidentsMediumSubmit} className="flex flex-col gap-2.5 w-full">
+              {(gameConfig.type === 'peg' || gameConfig.mode === 'medium' || gameConfig.type === 'human-calendar') && (
+                <form
+                  onSubmit={
+                    gameConfig.type === 'peg'
+                      ? handlePegSubmit
+                      : gameConfig.type === 'human-calendar'
+                        ? handleHumanCalendarSubmit
+                        : handlePresidentsMediumSubmit
+                  }
+                  className="flex flex-col gap-2.5 w-full"
+                >
                   <input 
-                    type={gameConfig.type === 'peg' ? "number" : "text"} 
+                    type={
+                      gameConfig.type === 'peg' || (gameConfig.type === 'human-calendar' && gameConfig.mode !== 'centuries')
+                        ? "number"
+                        : "text"
+                    } 
                     ref={inputRef}
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        gameConfig.type === 'peg' ? handlePegSubmit() : handlePresidentsMediumSubmit();
-                      }
-                    }}
-                    placeholder={gameConfig.type === 'peg' ? "Type number..." : "Type Name..."}
+                    placeholder={
+                      gameConfig.type === 'peg'
+                        ? "Type number..."
+                        : gameConfig.type === 'human-calendar'
+                          ? (gameConfig.mode === 'centuries' ? "Type value (e.g. -2, +1)..." : "Type value (0-6)...")
+                          : "Type Name..."
+                    }
                     className="w-full text-center text-2xl font-bold text-gray-800 border-2 border-gray-300 rounded-2xl py-3 px-4 focus:outline-none focus:border-purple-400 focus:bg-purple-50 transition-all placeholder:text-gray-300 bg-white shadow-sm"
                     autoFocus
                     disabled={flashState !== null}
                   />
-                  <button type="submit" disabled={flashState !== null || !inputValue.trim()} className="w-full bg-purple-500 hover:bg-purple-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-6 border-purple-700 disabled:border-gray-400 active:border-b-0 active:mt-[6px] transition-all uppercase tracking-wider">
+                  <button type="submit" disabled={flashState !== null || !inputValue.trim()} className="w-full bg-purple-500 hover:bg-purple-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-[6px] border-purple-700 disabled:border-gray-400 active:border-b-0 active:mt-[6px] transition-all uppercase tracking-wider">
                     Check
                   </button>
                 </form>
@@ -1288,7 +1783,7 @@ export default function App() {
                       key={i}
                       onClick={() => handlePresidentsEasySubmit(opt)}
                       disabled={flashState !== null}
-                      className="bg-white hover:bg-purple-50 text-purple-900 border-2 border-gray-300 font-bold text-lg py-3 px-3 rounded-2xl border-b-6 active:border-b-0 active:mt-[6px] transition-all text-center shadow-sm"
+                      className="bg-white hover:bg-purple-50 text-purple-900 border-2 border-gray-300 font-bold text-lg py-3 px-3 rounded-2xl border-b-[6px] active:border-b-0 active:mt-[6px] transition-all text-center shadow-sm"
                     >
                       {opt}
                     </button>
@@ -1307,6 +1802,7 @@ export default function App() {
                       onChange={(e) => setInputOrder(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowRight' || e.key === 'Enter') {
+                          e.preventDefault();
                           nameRef.current?.focus();
                         }
                       }}
@@ -1323,15 +1819,13 @@ export default function App() {
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowLeft') {
                           orderRef.current?.focus();
-                        } else if (e.key === 'Enter') {
-                          handlePresidentsHardSubmit();
                         }
                       }}
                       className="w-2/3 text-center text-lg font-bold text-gray-800 border-2 border-gray-300 rounded-2xl py-3 px-3 focus:outline-none focus:border-red-400 bg-white shadow-sm"
                       disabled={flashState !== null}
                     />
                   </div>
-                  <button type="submit" disabled={flashState !== null || !inputValue.trim() || !inputOrder.trim()} className="w-full bg-red-500 hover:bg-red-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-6 border-red-700 disabled:border-gray-400 active:border-b-0 active:mt-[6px] transition-all uppercase tracking-wider">
+                  <button type="submit" disabled={flashState !== null || !inputValue.trim() || !inputOrder.trim()} className="w-full bg-red-500 hover:bg-red-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-[6px] border-red-700 disabled:border-gray-400 active:border-b-0 active:mt-[6px] transition-all uppercase tracking-wider">
                     Submit
                   </button>
                 </form>
