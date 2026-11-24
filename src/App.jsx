@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X, User, Edit3, RotateCcw, Lock } from 'lucide-react';
+import { ChevronLeft, CheckCircle, XCircle, Flame, Clock, X, User, Edit3, RotateCcw } from 'lucide-react';
 
 // ==========================================
 // 1. CUSTOM HOOK: useProfile (localStorage)
@@ -477,16 +477,9 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(null);
   const [showHint, setShowHint] = useState(false);
 
-  // Password Lock State for Human Calendar -> Years
-  const [isYearsUnlocked, setIsYearsUnlocked] = useState(false);
-  const [isYearPasswordModalOpen, setIsYearPasswordModalOpen] = useState(false);
-  const [yearPasswordInput, setYearPasswordInput] = useState('');
-  const [yearPasswordError, setYearPasswordError] = useState(false);
-  
   const inputRef = useRef(null);
   const orderRef = useRef(null);
   const nameRef = useRef(null);
-  const yearPassInputRef = useRef(null);
 
   const [revealStep, setRevealStep] = useState(0);
 
@@ -494,18 +487,10 @@ export default function App() {
   useEffect(() => {
     if (!profile) {
       setRoute('home');
-      setIsYearsUnlocked(false);
-      setIsYearPasswordModalOpen(false);
     } else if (profile.track && route === 'home') {
       setRoute(profile.track === 'speed-math' ? 'speed-math-menu' : 'super-memory-menu');
     }
   }, [profile, route]);
-
-  useEffect(() => {
-    if (isYearPasswordModalOpen) {
-      setTimeout(() => yearPassInputRef.current?.focus(), 50);
-    }
-  }, [isYearPasswordModalOpen]);
 
   // ==========================================
   // FAST IMAGE PRELOADER (Eliminates PNG delay)
@@ -1083,21 +1068,6 @@ export default function App() {
   }
 
   if (route === 'human-calendar-menu') {
-    const handleYearPasswordSubmit = (e) => {
-      e.preventDefault();
-      if (yearPasswordInput.trim() === '7777') {
-        setIsYearsUnlocked(true);
-        setIsYearPasswordModalOpen(false);
-        setYearPasswordInput('');
-        setYearPasswordError(false);
-        setRoute('hc-years-menu');
-      } else {
-        setYearPasswordError(true);
-        setYearPasswordInput('');
-        yearPassInputRef.current?.focus();
-      }
-    };
-
     return (
       <div className="min-h-screen bg-purple-50 flex flex-col items-center justify-center p-6 font-sans relative">
         <style>{`
@@ -1115,59 +1085,6 @@ export default function App() {
         />
         {renderMenuHeader()}
 
-        {isYearPasswordModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-purple-950/75 backdrop-blur-sm p-4">
-            <div className="bg-white border-4 border-purple-300 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center">
-              <button
-                onClick={() => {
-                  setIsYearPasswordModalOpen(false);
-                  setYearPasswordInput('');
-                  setYearPasswordError(false);
-                }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-100 p-2 rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center border-2 border-purple-200">
-                <Lock size={32} />
-              </div>
-
-              <h3 className="text-3xl font-extrabold text-purple-900 mb-1">Years Locked</h3>
-              <p className="text-purple-500 text-base mb-5">Enter password to unlock</p>
-
-              <form onSubmit={handleYearPasswordSubmit} className="flex flex-col gap-3">
-                <input
-                  ref={yearPassInputRef}
-                  type="password"
-                  inputMode="numeric"
-                  value={yearPasswordInput}
-                  onChange={(e) => {
-                    setYearPasswordInput(e.target.value);
-                    if (yearPasswordError) setYearPasswordError(false);
-                  }}
-                  placeholder="Password..."
-                  className={`w-full text-center text-2xl font-bold text-purple-900 border-2 rounded-2xl py-3 px-4 focus:outline-none transition-all bg-white ${
-                    yearPasswordError
-                      ? 'border-red-400 bg-red-50 placeholder:text-red-300'
-                      : 'border-purple-300 focus:border-purple-500 focus:bg-purple-50 placeholder:text-purple-300'
-                  }`}
-                />
-                {yearPasswordError && (
-                  <p className="text-red-500 text-sm font-bold">Incorrect password. Try again!</p>
-                )}
-                <button
-                  type="submit"
-                  disabled={!yearPasswordInput.trim()}
-                  className="w-full bg-purple-500 hover:bg-purple-400 disabled:bg-gray-300 text-white font-bold text-xl py-3 rounded-2xl border-b-8 border-purple-700 disabled:border-gray-400 active:border-b-0 active:mt-[8px] transition-all uppercase tracking-wider"
-                >
-                  Unlock
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
         <div className="max-w-md w-full">
           <button onClick={() => setRoute('speed-math-menu')} className="mb-4 flex items-center text-purple-500 font-bold hover:text-purple-700 text-xl">
             <ChevronLeft size={24} /> Back
@@ -1178,19 +1095,10 @@ export default function App() {
               Centuries
             </button>
             <button
-              onClick={() => {
-                if (isYearsUnlocked) {
-                  setRoute('hc-years-menu');
-                } else {
-                  setYearPasswordInput('');
-                  setYearPasswordError(false);
-                  setIsYearPasswordModalOpen(true);
-                }
-              }}
-              className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide flex items-center justify-center gap-3"
+              onClick={() => setRoute('hc-years-menu')}
+              className="w-full bg-purple-400 hover:bg-purple-300 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-600 active:border-b-0 active:mt-[8px] transition-all tracking-wide"
             >
-              {!isYearsUnlocked && <Lock size={24} />}
-              <span>Years</span>
+              Years
             </button>
             <button onClick={() => initGame('human-calendar', 'months')} className="w-full bg-purple-500 hover:bg-purple-400 text-white font-bold text-2xl md:text-3xl py-4 rounded-2xl border-b-8 border-purple-700 active:border-b-0 active:mt-[8px] transition-all tracking-wide">
               Months
